@@ -1,9 +1,8 @@
-import asyncio
-from asyncio import ensure_future, futures
+import builtins
+from asyncio import futures, ensure_future
 from PyQt5.QtCore import QSize, QMetaObject, QPoint
 from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor
 from PyQt5.QtWidgets import QPushButton, QMainWindow, QLabel
-from threading import Thread
 
 from bleak import BleakError
 from puffco.btnet.client import PuffcoBleakClient
@@ -12,23 +11,24 @@ from .profiles import HeatProfiles
 
 
 class Profile:
-    def __init__(self, idx, name, temperature, time, colour):
+    def __init__(self, idx, name, temperature, time, color):
         self.idx = idx
         self.name = name
         self.temperature = temperature
-        self.temperature_f = (temperature * 1.8) + 32
+        self.temperature_f = round((temperature * 1.8) + 32)
         self.duration = time
-        self.colour = colour
+        self.color = color
 
 
 class PuffcoMain(QMainWindow):
     PROFILES = []
     initial = True
-    current_tab = ''
+    current_tab = 'home'
     SIZE = QSize(480, 844)
 
-    def __init__(self, mac_address: str, loop, bleak_loop):
-        self._client = PuffcoBleakClient(mac_address, loop=bleak_loop)
+    def __init__(self, mac_address: str, loop):
+        self._client = builtins.client = PuffcoBleakClient(mac_address)
+        self._loop = loop
         super(PuffcoMain, self).__init__(parent=None)
         self.setWindowTitle("Puffco Connect (PC)")
         self.setMinimumSize(self.SIZE)
@@ -41,7 +41,7 @@ class PuffcoMain(QMainWindow):
 
         self.puffcoIcon = QLabel('', self)
         self.puffcoIcon.setGeometry(210, 5, 64, 64)
-        self.puffcoIcon.setStyleSheet("image: url(:/icon/assets/puffco-logo.png);\n"
+        self.puffcoIcon.setStyleSheet("image: url(:/icon/puffco-logo.png);\n"
                                       "background: transparent;\n")
 
         self.home = HomeScreen(self)
@@ -58,7 +58,7 @@ class PuffcoMain(QMainWindow):
         self.profilesButton.clicked.connect(lambda: self.show_tab(self.profiles))
 
         divider = QLabel('', self)
-        divider.setPixmap(QPixmap(':/assets/assets/menu-item-separator.png'))
+        divider.setPixmap(QPixmap(':/assets/menu-separator.png'))
         divider.setScaledContents(True)
         divider.setGeometry(-92, self.homeButton.y() - 4, 573, 4)
         divider.setStyleSheet('background: transparent;')
@@ -69,11 +69,10 @@ class PuffcoMain(QMainWindow):
         x.end()
         self.setCentralWidget(self.home)
         # draw up the home screen upon launching the app
-        self.show_tab(self.home)
+        self.home.setVisible(True)
         self.show()
 
         QMetaObject.connectSlotsByName(self)
-        Thread(target=loop.run_until_complete, kwargs={'future': self.connect()}).start()
 
     def show_tab(self, frame):
         is_home = frame == self.home
@@ -89,33 +88,20 @@ class PuffcoMain(QMainWindow):
 
         # update the data
         try:
-            loop = asyncio.new_event_loop()
-            loop.run_until_complete(frame.fill())
-            loop.close()
-            del loop
+            fetch_task = ensure_future(frame.fill())
+            fetch_task.done()
         except BleakError:
             # no connect (typically happens when reading a characteristic in the same frame as establishing connection),
             return self.show_tab(frame)
 
-        if not frame.isVisible():
-            frame.setVisible(True)
-
-        if other.isVisible():
-            other.setVisible(False)
-
-    @staticmethod
-    def _future(*args, **kwargs):
-        """
-        * NOTE: The disconnect callback within Bleak will pass the BleakClient instance as the first arg *
-        :param args: [client, None]
-        :param kwargs: coroutine, loop
-        :return: asyncio.Task
-        """
-        return ensure_future(kwargs.pop('coroutine'), loop=kwargs.pop('loop'))
+        frame.show()
+        frame.setVisible(True)
+        other.hide()  # hide the other frame to prevent element bleed
+        other.setVisible(False)
 
     async def connect(self, *, retry=False):
         if self.initial:
-            self._client.set_disconnected_callback(self._future, coroutine=self.home.reset, loop=self._client.loop)
+            self._client.set_disconnected_callback(lambda *args: ensure_future(self._on_disconnect()).done())
             self.initial = False
 
         if retry:
@@ -153,6 +139,9 @@ class PuffcoMain(QMainWindow):
         if not self.isVisible():
             self.show()
 
+        print('lost connection to device, attempting to reconnect...')
+        await self.connect(retry=True)
+
     async def _on_connect(self):
         current_profile_name = await self._client.get_profile_name()
 
@@ -165,10 +154,10 @@ class PuffcoMain(QMainWindow):
                 reset_idx = i
 
             temp = await self._client.get_profile_temp()
-            colour = await self._client.get_profile_colour()
+            color = await self._client.profile_color_as_rgb(current_profile=i)
             time = await self._client.get_profile_time()
 
-            self.PROFILES.append(Profile(i, name, temp, time, colour))
+            self.PROFILES.append(Profile(i, name, temp, time, color))
 
         # reset the profile back to where it was
         if reset_idx is not None:
@@ -176,6 +165,7 @@ class PuffcoMain(QMainWindow):
 
         if self.current_tab != 'home':
             self.show_tab(self.home)
+        await self.profiles.fill()
         await self.home.fill(from_callback=True)
         if not self.isVisible():
             self.show()
