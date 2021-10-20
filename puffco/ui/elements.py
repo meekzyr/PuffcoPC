@@ -1,6 +1,39 @@
-from PyQt5.QtWidgets import QAbstractButton, QLabel, QGraphicsBlurEffect
-from PyQt5.QtGui import QPainter, QColor, QPixmap
+from PyQt5.QtWidgets import QAbstractButton, QLabel, QGraphicsBlurEffect, QFrame
+from PyQt5.QtGui import QPainter, QColor, QPixmap, QFont
 from PyQt5.QtCore import Qt
+
+
+class DeviceVisualizer(QFrame):
+    def __init__(self, parent):
+        super(DeviceVisualizer, self).__init__(parent)
+        self.move(210, 190)
+        self.setStyleSheet('background: transparent;')
+        self.device = QLabel('', self)
+        self.device.setPixmap(QPixmap(":/assets/peak.png"))
+        self.device.resize(291, 511)
+        self.device.setScaledContents(True)
+        self.led = QLabel('', self)
+        self.led.setMaximumWidth(self.device.width() - 50)
+        self.led.resize(self.device.size())
+
+        self.led.setPixmap(QPixmap(":/assets/peakLED.png"))
+        self.led.setScaledContents(True)
+        self.led.setAlignment(Qt.AlignCenter)
+        self.led.setStyleSheet(None)
+
+    def colorize(self, r: int, g: int, b: int, alpha: int = 255):
+        pixmap = QPixmap(":/assets/peakLED.png")
+        painter = QPainter(pixmap)
+        painter.setCompositionMode(painter.CompositionMode_SourceIn)
+        painter.fillRect(pixmap.rect(), QColor(r, g, b, alpha))
+        painter.end()
+        self.led.setPixmap(pixmap)
+        b = QGraphicsBlurEffect()
+        b.setBlurRadius(5)
+        b.setBlurHints(QGraphicsBlurEffect.BlurHint.QualityHint)
+        self.led.setGraphicsEffect(b)
+        self.led.raise_()
+        self.led.update()
 
 
 class ProfileButton(QAbstractButton):
@@ -60,6 +93,117 @@ class ProfileButton(QAbstractButton):
             painter.fillRect(event.rect(), QColor(*self.color))
 
         painter.drawPixmap(event.rect(), self._pixmap)
+        painter.end()
 
     def sizeHint(self):
         return self._pixmap.size()
+
+
+class DataLabel(QLabel):
+    default_heading = 'Heading'
+    default_data = 'Data'
+
+    def __init__(self, parent, *, heading='Heading', data='- -'):
+        self.default_heading = heading
+        self.default_data = data
+
+        super(DataLabel, self).__init__('', parent)
+        self.setStyleSheet('background: transparent;')
+        self.setPixmap(QPixmap(':/assets/data-gradient.png'))
+        self.setScaledContents(True)
+        self.setMaximumSize(340, 80)
+        self.setMinimumSize(280, 80)
+        self.setAlignment(Qt.AlignCenter)
+
+        self.heading = QLabel(heading, self)
+        self.heading.move(10, 5)
+        self.heading.adjustSize()
+        self.heading.setAlignment(Qt.AlignCenter)
+
+        self._data = QLabel(data, self)
+        self._data.move(15, 45)
+        self._data.adjustSize()
+        self._data.setAlignment(Qt.AlignCenter)
+
+    def update_data(self, data: str):
+        self._data.setText(data)
+        self._data.adjustSize()
+
+    def reset_properties(self):
+        if self.heading.text() != self.default_heading:
+            self.heading.setText(self.default_heading)
+            self.heading.adjustSize()
+
+        if self._data.text() != self.default_data:
+            self._data.setText(self.default_data)
+            self._data.adjustSize()
+
+    @property
+    def data(self) -> str:
+        return self._data.text()
+
+
+class Battery(QFrame):
+    _asset: str = ':/assets/assets/icon-battery-unknown.png'
+
+    def __init__(self, parent):
+        super(Battery, self).__init__(parent)
+        self.setStyleSheet('background: transparent;')
+        self.current_percentage = None
+        self.last_charge_state = False
+        self.percent = QLabel('--- %', self)
+        self.percent.adjustSize()
+        self.icon = QLabel('', self)
+        self.icon.setMinimumSize(64, 21)
+        self.icon.setPixmap(QPixmap(self._asset).scaled(41, 21))
+        self.icon.move(45, 3)
+        self.eta = QLabel('', self)
+        shrink = self.eta.font()
+        shrink.setPointSize(12)
+        self.eta.setFont(shrink)
+        self.eta.move(self.percent.x() - 10,
+                      (self.percent.y() + self.percent.height()) + 3)
+        self.eta.setScaledContents(True)
+
+    def update_battery(self, percent: int, charging: bool, eta: str = None):
+        if self.icon.x() != 40:
+            self.icon.move(40, self.icon.y())
+
+        if eta:
+            self.eta.setText(f'Charge ETA: ~ {eta}')
+            self.eta.adjustSize()
+        elif self.eta.text() and eta is None:
+            self.eta.setText('')
+            self.eta.adjustSize()
+
+        if percent != self.current_percentage:
+            self.percent.setText(f'{percent} %')
+            self.percent.update()
+            self.current_percentage = percent
+
+        asset_name = 'icon-battery-'
+        if charging != self.last_charge_state:
+            if charging:
+                asset_name += 'charging-'
+
+            self.last_charge_state = charging
+
+        if percent <= 10:
+            asset_name += '10'
+        elif 40 > percent >= 15:
+            asset_name += '25'
+        elif 65 > percent >= 40:
+            asset_name += '50'
+        elif 90 > percent >= 65:
+            asset_name += '75'
+        else:
+            asset_name += 'full'
+
+        if asset_name.endswith('-'):
+            asset_name += 'unknown'
+
+        asset = f':/assets/assets/{asset_name}.png'
+        if self._asset != asset:
+            pixmap = QPixmap(asset)
+            self.icon.setPixmap(pixmap.scaled(41, 21))
+            self.icon.update()

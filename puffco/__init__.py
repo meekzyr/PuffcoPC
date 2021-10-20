@@ -1,5 +1,4 @@
 # import compiled qt resource data
-
 __import__('resources')
 
 if __name__ == "__main__":
@@ -9,12 +8,13 @@ if __name__ == "__main__":
 
     app = QApplication([])
     QFontDatabase.addApplicationFont(':/fonts/assets/puffco-slick.ttf')
-    app.setFont(QFont('Slick'))
+    QFontDatabase.addApplicationFont(':/fonts/bigshoulders-medium.ttf')
+    app.setFont(QFont('Big Shoulders Display Medium', 16))
 
     main_loop = get_event_loop()
 
-    from puffco.ui import PuffcoMain
-    ui = PuffcoMain('84:2E:14:80:2B:5A', main_loop)
+    from ui import PuffcoMain
+    ui = PuffcoMain()
 
     async def _process():
         # replacement for app._exec, allowing us to use

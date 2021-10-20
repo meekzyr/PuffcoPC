@@ -1,5 +1,5 @@
 from bleak import BleakClient
-from . import Characteristics, parse, parseInt
+from . import Characteristics, PeakProModels, parse, parseInt
 
 from datetime import datetime
 import struct
@@ -11,16 +11,51 @@ PROFILE_TO_BYT_ARRAY = {0: bytearray([0, 0, 0, 0]),
 
 
 class PuffcoBleakClient(BleakClient):
-    def __init__(self, mac_address, **kwargs):
-        super(PuffcoBleakClient, self).__init__(mac_address, **kwargs)
+    attempted_devices = []
+
+    def __init__(self, **kwargs):
+        super(PuffcoBleakClient, self).__init__('', **kwargs)
+
+    async def get_device_model(self, *, return_name=False) -> str:  # TODO: tie this into changing app bg/device visualization
+        model_number = (await self.read_gatt_char(Characteristics.MODEL_NUMBER)).decode()
+        if return_name:
+            return PeakProModels.get(model_number, 'UNKNOWN MODEL')
+        return model_number
+
+    @property
+    async def currently_charging(self):
+        # (0, CHARGING - BULK)
+        # (1, CHARGING - TOPUP)
+        # (2, NOT CHARGING - FULL, cable connected)
+        # (3, NOT CHARGING - OVERTEMP)
+        # (4, NOT CHARGING - CABLE DISCONNECTED)
+        state = int(float(parse(await self.read_gatt_char(Characteristics.BATTERY_CHARGE_STATE))))
+        return state in (0, 1)
 
     async def preheat(self):
         await self.write_gatt_char(Characteristics.COMMAND, bytearray([0, 0, 224, 64]))
 
+    async def get_battery_charge_eta(self):
+        """
+        Get the estimated seconds until the battery is fully charged
+        :returns:
+            None (DEVICE NOT CHARGING)
+            -1 (DEVICE FULLY CHARGED ?)
+            int (CHARGING; SECONDS UNTIL CHARGED)
+        """
+        if not (await self.currently_charging):
+            return None
+
+        full_eta = parse(await self.read_gatt_char(Characteristics.BATTERY_CHARGE_FULL_ETA))
+        if full_eta.lower() == 'nan':
+            return -1
+
+        seconds_until_charge = float(full_eta)
+        return seconds_until_charge
+
     async def get_battery_percentage(self):
         raw_percent_data = await self.read_gatt_char(Characteristics.BATTERY_SOC)
-        current_percent = int(float(parse(raw_percent_data)))
-        return f'{current_percent} %'
+        return int(float(parse(raw_percent_data)))
 
     async def get_total_dab_count(self):
         raw_dab_total = await self.read_gatt_char(Characteristics.TOTAL_DAB_COUNT)
@@ -96,10 +131,20 @@ class PuffcoBleakClient(BleakClient):
     async def get_operating_state(self) -> int:
         """
         Operating States:
-            5 - OFF
-            6 - ON
+            0 - "INIT_MEMORY"
+            1 - "INIT_VERSION_DISP"
+            2 - "INIT_BATTERY_DISP"
+            3 - "MASTER_OFF"
+            4 - SLEEP
+            5 - OFF "IDLE
+            6 - ON "TEMP SELECT"
             7 - PREHEATING
-            8 - HEATED
+            8 - HEATED "CYCLE_ACTIVE"
+            9 - COOLDOWN "CYCLE_FADE"
+            10 - "VERSION_DISP"
+            11 - "BATTERY_DISP"
+            12 - "FACTORY TEST"
+            13 - BLE BONDING
         """
         operating_state = parse(await self.read_gatt_char(Characteristics.OPERATING_STATE))
         return int(float(operating_state))

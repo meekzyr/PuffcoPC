@@ -1,7 +1,32 @@
 import struct
+from enum import IntEnum
+
+
+class ChamberType(IntEnum):
+    NONE = 0
+    CLASSIC = 1
+    HERBAL = 2  # ?? possibly a future chamber?
+    PERFORMANCE = 3
+
+
+PeakProModels = {
+    '0': 'Peak Pro',
+    '1': 'Opal Peak Pro',
+    '21': 'Peak Pro',
+    '22': 'Opal Peak Pro',
+    '4294967295': 'Peak Pro'
+}
 
 
 class Characteristics:
+    SERVICE_UUID = "06caf9c0-74d3-454f-9be9-e30cd999c17a"  # used to discover Peak Pro devices w/o needing MAC address
+
+    MANUFACTURER_NAME = "00002a29-0000-1000-8000-00805f9b34fb"
+    MODEL_NUMBER = "00002a24-0000-1000-8000-00805f9b34fb"
+    SERIAL_NUMBER = "00002a25-0000-1000-8000-00805f9b34fb"
+    HARDWARE_REVISION = "00002a27-0000-1000-8000-00805f9b34fb"
+    SOFTWARE_REVISION = "00002a28-0000-1000-8000-00805f9b34fb"
+
     COMMAND = "F9A98C15-C651-4F34-B656-D100BF580040"
     HEATER_TEMP = "F9A98C15-C651-4F34-B656-D100BF580025"
     DEVICE_NAME = "F9A98C15-C651-4F34-B656-D100BF58004D"
@@ -21,7 +46,9 @@ class Characteristics:
     PROFILE_PREHEAT_TIME = "F9A98C15-C651-4F34-B656-D100BF580064"
     PROFILE_COLOR = "F9A98C15-C651-4F34-B656-D100BF580065"
 
-    BATTERY_SOC = 'F9A98C15-C651-4F34-B656-D100BF580020'
+    BATTERY_SOC = "F9A98C15-C651-4F34-B656-D100BF580020"
+    BATTERY_CHARGE_STATE = "F9A98C15-C651-4F34-B656-D100BF580031"
+    BATTERY_CHARGE_FULL_ETA = "F9A98C15-C651-4F34-B656-D100BF580033"
 
 
 def parse(data):
@@ -30,6 +57,7 @@ def parse(data):
     for chars in remove:
         _struct = str(_struct).replace(chars, "")
     return _struct
+
 
 def parseInt(data):
     _struct = struct.unpack('<I', data)

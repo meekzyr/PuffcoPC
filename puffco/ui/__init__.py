@@ -4,10 +4,13 @@ from PyQt5.QtCore import QSize, QMetaObject, QPoint
 from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor
 from PyQt5.QtWidgets import QPushButton, QMainWindow, QLabel
 
-from bleak import BleakError
+from bleak import BleakError, BleakScanner
+
+import btnet
 from puffco.btnet.client import PuffcoBleakClient
 from .homescreen import HomeScreen
 from .profiles import HeatProfiles
+from .settings import Settings
 
 
 class Profile:
@@ -22,13 +25,11 @@ class Profile:
 
 class PuffcoMain(QMainWindow):
     PROFILES = []
-    initial = True
     current_tab = 'home'
     SIZE = QSize(480, 844)
 
-    def __init__(self, mac_address: str, loop):
-        self._client = builtins.client = PuffcoBleakClient(mac_address)
-        self._loop = loop
+    def __init__(self):
+        self._client = builtins.client = PuffcoBleakClient()
         super(PuffcoMain, self).__init__(parent=None)
         self.setWindowTitle("Puffco Connect (PC)")
         self.setMinimumSize(self.SIZE)
@@ -44,6 +45,17 @@ class PuffcoMain(QMainWindow):
         self.puffcoIcon.setStyleSheet("image: url(:/icon/puffco-logo.png);\n"
                                       "background: transparent;\n")
 
+        # self.settings_window = Settings(self)
+        #
+        # self.settings = QPushButton('', self)
+        # icn = QPixmap(':/assets/assets/icon-settings.png')
+        # self.settings.setIconSize(icn.size())
+        # self.settings.setIcon(QIcon(icn))
+        # self.settings.setStyleSheet('background: transparent;')
+        # self.settings.adjustSize()
+        # self.settings.move(self.width() - 70, 20)
+        # self.settings.clicked.connect(self.display_settings)
+
         self.home = HomeScreen(self)
         self.profiles = HeatProfiles(self)
         self.profiles.setGeometry(self.geometry())
@@ -58,12 +70,12 @@ class PuffcoMain(QMainWindow):
         self.profilesButton.clicked.connect(lambda: self.show_tab(self.profiles))
 
         divider = QLabel('', self)
-        divider.setPixmap(QPixmap(':/assets/menu-separator.png'))
+        divider.setPixmap(QPixmap(':/assets/menu_separator.png'))
         divider.setScaledContents(True)
         divider.setGeometry(-92, self.homeButton.y() - 4, 573, 4)
         divider.setStyleSheet('background: transparent;')
 
-        x = QPainter()
+        x = QPainter(self)
         x.setPen(QColor(255, 255, 255))
         x.drawPoints(QPoint(210, 50), QPoint(210, 90))
         x.end()
@@ -76,7 +88,6 @@ class PuffcoMain(QMainWindow):
 
     def show_tab(self, frame):
         is_home = frame == self.home
-        print('show_tab', frame, is_home)
         if (is_home and self.current_tab == 'home') or (self.current_tab == 'profiles' and not is_home):
             return
 
@@ -100,18 +111,26 @@ class PuffcoMain(QMainWindow):
         other.setVisible(False)
 
     async def connect(self, *, retry=False):
-        if self.initial:
-            self._client.set_disconnected_callback(lambda *args: ensure_future(self._on_disconnect()).done())
-            self.initial = False
+        if self._client.address == '':
+            scanner = BleakScanner()
+            devices_found = await scanner.discover()
+            for device in devices_found:
+                service_uuids = device.metadata.get('uuids')
+                device_mac_address = device.address
+                if device_mac_address in self._client.attempted_devices:
+                    print(f'skipping over {device.name} ({device_mac_address}, already failed to connect before')
+                    continue
 
-        if retry:
-            try:
-                await self._client.unpair()
-            except AttributeError:
-                # was not paired to begin with:
-                pass
+                if btnet.Characteristics.SERVICE_UUID in service_uuids or device.address.startswith('84:2E:14:'):
+                    print('Potential Puffco Product', device.address, device.name)
+                    self._client.address = device.address
+                    break
 
-            await self._client.disconnect()
+            if self._client.address == '':
+                return await self.connect(retry=True)
+
+        # TODO: fix disconnect callback spam
+        #self._client.set_disconnected_callback(lambda *args: ensure_future(self._on_disconnect()).done())
 
         connected = False
         try:
@@ -163,8 +182,6 @@ class PuffcoMain(QMainWindow):
         if reset_idx is not None:
             await self._client.change_profile(reset_idx)
 
-        if self.current_tab != 'home':
-            self.show_tab(self.home)
         await self.profiles.fill()
         await self.home.fill(from_callback=True)
         if not self.isVisible():
