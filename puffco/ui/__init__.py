@@ -1,4 +1,3 @@
-import builtins
 from asyncio import futures, ensure_future
 from PyQt5.QtCore import QSize, QMetaObject, QPoint
 from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor
@@ -6,8 +5,7 @@ from PyQt5.QtWidgets import QPushButton, QMainWindow, QLabel
 
 from bleak import BleakError, BleakScanner
 
-import btnet
-from puffco.btnet.client import PuffcoBleakClient
+from puffco.btnet import Characteristics
 from .homescreen import HomeScreen
 from .profiles import HeatProfiles
 from .settings import Settings
@@ -28,8 +26,8 @@ class PuffcoMain(QMainWindow):
     current_tab = 'home'
     SIZE = QSize(480, 844)
 
-    def __init__(self):
-        self._client = builtins.client = PuffcoBleakClient()
+    def __init__(self, client):
+        self._client = client
         super(PuffcoMain, self).__init__(parent=None)
         self.setWindowTitle("Puffco Connect (PC)")
         self.setMinimumSize(self.SIZE)
@@ -75,16 +73,22 @@ class PuffcoMain(QMainWindow):
         divider.setGeometry(-92, self.homeButton.y() - 4, 573, 4)
         divider.setStyleSheet('background: transparent;')
 
-        x = QPainter(self)
-        x.setPen(QColor(255, 255, 255))
-        x.drawPoints(QPoint(210, 50), QPoint(210, 90))
-        x.end()
+        # PyQt/Nuitka spitting errors for this, not rendering
+        # x = QPainter()
+        # x.begin(self)
+        # x.setPen(QColor(255, 255, 255))
+        # x.drawPoints(QPoint(210, 50), QPoint(210, 90))
+        # x.end()
         self.setCentralWidget(self.home)
         # draw up the home screen upon launching the app
         self.home.setVisible(True)
         self.show()
 
         QMetaObject.connectSlotsByName(self)
+
+    def closeEvent(self, event):
+        loop.stop()
+        event.accept()
 
     def show_tab(self, frame):
         is_home = frame == self.home
@@ -121,7 +125,7 @@ class PuffcoMain(QMainWindow):
                     print(f'skipping over {device.name} ({device_mac_address}, already failed to connect before')
                     continue
 
-                if btnet.Characteristics.SERVICE_UUID in service_uuids or device.address.startswith('84:2E:14:'):
+                if Characteristics.SERVICE_UUID in service_uuids or device.address.startswith('84:2E:14:'):
                     print('Potential Puffco Product', device.address, device.name)
                     self._client.address = device.address
                     break
@@ -148,9 +152,10 @@ class PuffcoMain(QMainWindow):
         if connected:
             await self._client.pair()
         else:
-            print('retrying..')
+            print('Retrying..')
             return await self.connect(retry=True)
 
+        print('Connected!')
         return connected
 
     async def _on_disconnect(self):

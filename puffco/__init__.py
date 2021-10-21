@@ -1,37 +1,32 @@
 # import compiled qt resource data
-__import__('resources')
+from puffco import resources
 
-if __name__ == "__main__":
-    from asyncio import ensure_future, get_event_loop, sleep
-    from PyQt5.QtGui import QFont, QFontDatabase
-    from PyQt5.QtWidgets import QApplication
+mj, mi, bu = resources.qt_version
+print(f'Using Qt {mj}.{mi}.{bu}')
 
-    app = QApplication([])
-    QFontDatabase.addApplicationFont(':/fonts/assets/puffco-slick.ttf')
-    QFontDatabase.addApplicationFont(':/fonts/bigshoulders-medium.ttf')
-    app.setFont(QFont('Big Shoulders Display Medium', 16))
 
-    main_loop = get_event_loop()
-
-    from ui import PuffcoMain
-    ui = PuffcoMain()
-
-    async def _process():
-        # replacement for app._exec, allowing us to use
-        # asyncio's event loops to update the UI
-        while True:
-            app.processEvents()
-            await sleep(0)
-
-    _process_task = ensure_future(_process())
-    _connect_task = ensure_future(ui.connect(), loop=main_loop)
-    ui.show()
+def nuitka_patch_winrt():
+    import winrt
     try:
-        main_loop.run_forever()
-        # sys.exit(app.exec_())
-    except KeyboardInterrupt:
-        pass
-    finally:
-        _process_task.cancel()
-        _connect_task.cancel()
-        app.quit()
+        winrt._winrt.__file__
+    except AttributeError:
+        from pathlib import Path
+
+        def _import_ns_module(ns):
+            import importlib.machinery
+            import importlib.util
+
+            try:
+                module_name = "_winrt_" + ns.replace('.', '_')
+                # hotfix for packing winrt on windows
+                file = str(Path(__file__).parent) + '\_winrt.pyd'
+
+                loader = importlib.machinery.ExtensionFileLoader(module_name, file)
+                spec = importlib.util.spec_from_loader(module_name, loader)
+                module = importlib.util.module_from_spec(spec)
+                loader.exec_module(module)
+                return module
+            except:
+                return None
+
+        winrt._import_ns_module = _import_ns_module
