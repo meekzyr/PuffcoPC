@@ -19,7 +19,6 @@ class HomeScreen(QFrame):
         self.ui_deviceName.setAlignment(Qt.AlignCenter)
         self.ui_deviceName.setWordWrap(False)
         self.ui_deviceName.setStyleSheet('font-size: 36px;\n'
-                                         'font-stretch: expanded;\n'
                                          'font-weight: bold;')
         self.ui_deviceName.adjustSize()
 
