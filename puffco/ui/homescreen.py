@@ -22,8 +22,6 @@ class HomeScreen(QFrame):
                                          'font-weight: bold;')
         self.ui_deviceName.adjustSize()
 
-        ########
-
         self.statusLabel = QLabel('STATUS:', self)
         self.statusLabel.adjustSize()
         self.statusLabel.move((parent.width() // 3) + 10,
@@ -38,7 +36,7 @@ class HomeScreen(QFrame):
         self.ui_connectStatus.setAlignment(Qt.AlignCenter)
 
         self.ui_battery = Battery(self)
-        self.ui_battery.move(self.statusLabel.x() + 30, self.statusLabel.y() + self.statusLabel.height() + 5)
+        self.ui_battery.move(self.statusLabel.x() + 20, self.statusLabel.y() + self.statusLabel.height() + 5)
 
         self.ui_activeProfile = DataLabel(self, heading='ACTIVE PROFILE:', data='- -')
         self.ui_bowlTemp = DataLabel(self, heading='BOWL TEMPERATURE:', data='- -')
@@ -94,7 +92,7 @@ class HomeScreen(QFrame):
                 mins, sec = divmod(rem, 60)
                 eta = f'{str(int(mins)).zfill(2)}:{str(int(sec)).zfill(2)}'
                 if hr > 0:
-                    eta = str(int(hr)).zfill(2) + eta
+                    eta = str(int(hr)).zfill(2) + f':{eta}'
 
             self.ui_battery.update_battery(percentage, is_charging, eta)
         except bleak.BleakError:
@@ -114,7 +112,6 @@ class HomeScreen(QFrame):
         # todo: only constantly check for bowl temp and profile/led updates in this loop
         #  use operating state and/or profile times to determine when to query for updates
         try:
-            #print(await client.get_battery_charge_eta())
             await client.change_profile(await client.get_profile())  # needed to get profile name
 
             profile_name = await client.get_profile_name()

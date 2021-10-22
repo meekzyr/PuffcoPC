@@ -104,13 +104,19 @@ class PuffcoBleakClient(BleakClient):
         profile = parse(await self.read_gatt_char(Characteristics.PROFILE_CURRENT))
         return int(round(float(profile), 1))
 
+    async def set_profile_name(self, name: str):
+        await self.write_gatt_char(Characteristics.PROFILE_NAME, bytearray(name.encode()))
+
     async def get_profile_name(self):
         profile_name = await self.read_gatt_char(Characteristics.PROFILE_NAME)
         return profile_name.decode().upper()
 
+    async def set_profile_color(self, color_bytes: list):
+        await self.write_gatt_char(Characteristics.PROFILE_COLOR, bytearray(color_bytes))
+
     async def get_profile_color(self):
         color_data = await self.read_gatt_char(Characteristics.PROFILE_COLOR)
-        return list(color_data)
+        return list(color_data)  # getting hex code: codecs.encode(color_data, 'hex').decode()[:6]
 
     async def set_profile_time(self, seconds: int):
         packed_time = struct.pack('<f', seconds)

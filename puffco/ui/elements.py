@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QAbstractButton, QLabel, QGraphicsBlurEffect, QFrame
-from PyQt5.QtGui import QPainter, QColor, QPixmap, QFont
-from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QAbstractButton, QLabel, QGraphicsBlurEffect, QFrame, QPushButton
+from PyQt5.QtGui import QPainter, QColor, QPixmap, QFont, QIcon
+from PyQt5.QtCore import Qt, QSize
 
 
 class DeviceVisualizer(QFrame):
@@ -36,19 +36,64 @@ class DeviceVisualizer(QFrame):
         self.led.update()
 
 
+class WhiteImageButton(QPushButton):
+    def __init__(self, asset_path, parent, *, callback=None):
+        super(WhiteImageButton, self).__init__('', parent)
+
+        pixmap = QPixmap(asset_path)
+        painter = QPainter(pixmap)
+        painter.setCompositionMode(painter.CompositionMode_SourceIn)
+        painter.fillRect(pixmap.rect(), QColor(255, 255, 255))
+        painter.end()
+
+        self.setIconSize(pixmap.size())
+        self.setIcon(QIcon(pixmap))
+        self.setStyleSheet('background: transparent;')
+        self.adjustSize()
+
+        if callback:
+            self.clicked.connect(callback)
+
+    def resize(self, w: int, h: int) -> None:
+        self.setIconSize(QSize(w, h))
+        return super(WhiteImageButton, self).resize(w, h)
+
+
 class ProfileButton(QAbstractButton):
+    ID = 0
+
     def __init__(self, parent, pixmap, geom):
         super(ProfileButton, self).__init__(parent)
+        self.setObjectName('ProfileButton-%d' % ProfileButton.ID)
+        ProfileButton.ID += 1
         self.setGeometry(*geom)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self._pixmap = pixmap
-        self.profile_name = QLabel('', self)
-        self.profile_name.move(5, 5)
-        self.temperature = QLabel('', self)
-        self.temperature.move(5, 80)
+
+        # add a 2px grayish border around us
+        self._border = QFrame(parent)
+        self._border.setGeometry(self.geometry())
+        self._border.move(self.pos())
+        self._border.setStyleSheet('border: 2px #191919;'
+                                   'border-style: outset;')
+
         self.duration = QLabel('', self)
-        self.duration.move(310, 80)
+        self.duration.setFont(QFont('Slick', 11))
+        self.duration.move(350, 90)
         self.duration.adjustSize()
+
+        f = QFont(self.font().family(), 16)
+        f.setStretch(QFont.Unstretched * 1.5)
+
+        self.profile_name = QLabel('', self)
+        self.profile_name.setFont(f)
+        self.profile_name.move(10, 5)
+        self.temperature = QLabel('', self)
+        f.setStretch(QFont.Unstretched)
+        f.setPointSize(32)
+        f.setBold(True)
+        self.temperature.setFont(f)
+        self.temperature.move(10, 60)
 
         self.glow = QLabel('', self)
         # TODO: the image below is meant for the page when you select a profile.. recreate the proper arc traj+glow
@@ -68,7 +113,7 @@ class ProfileButton(QAbstractButton):
         # color our glow effect
         pm = self.glow.pixmap()
         painter = QPainter(pm)
-        painter.setOpacity(15)
+        painter.setOpacity(0.9)
         painter.setCompositionMode(painter.CompositionMode_SourceIn)
         painter.fillRect(pm.rect(), QColor(*color))
         self.update()
@@ -152,22 +197,24 @@ class Battery(QFrame):
         self.current_percentage = None
         self.last_charge_state = False
         self.percent = QLabel('--- %', self)
+        self.percent.move(10, 0)
         self.percent.adjustSize()
         self.icon = QLabel('', self)
         self.icon.setMinimumSize(64, 21)
         self.icon.setPixmap(QPixmap(self._asset).scaled(41, 21))
-        self.icon.move(45, 3)
+        self.icon.move(55, 3)
         self.eta = QLabel('', self)
         shrink = self.eta.font()
         shrink.setPointSize(12)
         self.eta.setFont(shrink)
-        self.eta.move(self.percent.x() - 10,
-                      (self.percent.y() + self.percent.height()) + 3)
+        self.eta.move(0, (self.percent.y() + self.percent.height()) + 3)
+        self.eta.setMinimumWidth(200)
         self.eta.setScaledContents(True)
 
+
     def update_battery(self, percent: int, charging: bool, eta: str = None):
-        if self.icon.x() != 40:
-            self.icon.move(40, self.icon.y())
+        if self.icon.x() != 50:
+            self.icon.move(50, self.icon.y())
 
         if eta:
             self.eta.setText(f'Charge ETA: ~ {eta}')

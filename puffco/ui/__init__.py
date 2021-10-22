@@ -1,24 +1,29 @@
-from asyncio import futures, ensure_future
-from PyQt5.QtCore import QSize, QMetaObject, QPoint
-from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor
+from asyncio import futures, ensure_future, sleep
+from PyQt5.QtCore import QSize, QMetaObject
+from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import QPushButton, QMainWindow, QLabel
 
 from bleak import BleakError, BleakScanner
 
 from puffco.btnet import Characteristics
+from .elements import WhiteImageButton
 from .homescreen import HomeScreen
 from .profiles import HeatProfiles
 from .settings import Settings
 
 
 class Profile:
-    def __init__(self, idx, name, temperature, time, color):
+    def __init__(self, idx, name, temperature, time, color, color_bytes):
         self.idx = idx
         self.name = name
         self.temperature = temperature
         self.temperature_f = round((temperature * 1.8) + 32)
         self.duration = time
         self.color = color
+        self.color_bytes = color_bytes
+
+    def __str__(self):
+        return str(self.__dict__)
 
 
 class PuffcoMain(QMainWindow):
@@ -43,16 +48,9 @@ class PuffcoMain(QMainWindow):
         self.puffcoIcon.setStyleSheet("image: url(:/icon/puffco-logo.png);\n"
                                       "background: transparent;\n")
 
-        # self.settings_window = Settings(self)
-        #
-        # self.settings = QPushButton('', self)
-        # icn = QPixmap(':/assets/assets/icon-settings.png')
-        # self.settings.setIconSize(icn.size())
-        # self.settings.setIcon(QIcon(icn))
-        # self.settings.setStyleSheet('background: transparent;')
-        # self.settings.adjustSize()
-        # self.settings.move(self.width() - 70, 20)
-        # self.settings.clicked.connect(self.display_settings)
+        self.settings_window = Settings(self)
+        self.settings = WhiteImageButton(':/assets/assets/icon-settings.png', self, callback=self.display_settings)
+        self.settings.move(self.width() - 70, 20)
 
         self.home = HomeScreen(self)
         self.profiles = HeatProfiles(self)
@@ -66,6 +64,7 @@ class PuffcoMain(QMainWindow):
         self.profilesButton.setGeometry(self.homeButton.width() + 2, self.homeButton.y(),
                                         self.homeButton.width() - 2, self.homeButton.height())
         self.profilesButton.clicked.connect(lambda: self.show_tab(self.profiles))
+        self.profilesButton.setDisabled(True)
 
         divider = QLabel('', self)
         divider.setPixmap(QPixmap(':/assets/menu_separator.png'))
@@ -73,18 +72,19 @@ class PuffcoMain(QMainWindow):
         divider.setGeometry(-92, self.homeButton.y() - 4, 573, 4)
         divider.setStyleSheet('background: transparent;')
 
-        # PyQt/Nuitka spitting errors for this, not rendering
-        # x = QPainter()
-        # x.begin(self)
-        # x.setPen(QColor(255, 255, 255))
-        # x.drawPoints(QPoint(210, 50), QPoint(210, 90))
-        # x.end()
         self.setCentralWidget(self.home)
         # draw up the home screen upon launching the app
         self.home.setVisible(True)
         self.show()
 
+        #self.settings.raise_()
+
         QMetaObject.connectSlotsByName(self)
+
+    def display_settings(self, *args):
+        print('hey', args)
+
+        self.settings_window.show()
 
     def closeEvent(self, event):
         loop.stop()
@@ -106,7 +106,7 @@ class PuffcoMain(QMainWindow):
             fetch_task = ensure_future(frame.fill())
             fetch_task.done()
         except BleakError:
-            # no connect (typically happens when reading a characteristic in the same frame as establishing connection),
+            # no connect (typically happens when reading a characteristic in the same frame as establishing connection)
             return self.show_tab(frame)
 
         frame.show()
@@ -161,7 +161,7 @@ class PuffcoMain(QMainWindow):
     async def _on_disconnect(self):
         await self.home.reset()
         if not self.isVisible():
-            self.show()
+            self.show()`
 
         print('lost connection to device, attempting to reconnect...')
         await self.connect(retry=True)
@@ -178,10 +178,11 @@ class PuffcoMain(QMainWindow):
                 reset_idx = i
 
             temp = await self._client.get_profile_temp()
-            color = await self._client.profile_color_as_rgb(current_profile=i)
+            color_bytes = await self._client.get_profile_color()
             time = await self._client.get_profile_time()
 
-            self.PROFILES.append(Profile(i, name, temp, time, color))
+            self.PROFILES.append(Profile(i, name, temp, time, color_bytes[:3], color_bytes))
+            await sleep(0.1)  # short delay to prevent incorrect profile colors
 
         # reset the profile back to where it was
         if reset_idx is not None:
@@ -191,3 +192,5 @@ class PuffcoMain(QMainWindow):
         await self.home.fill(from_callback=True)
         if not self.isVisible():
             self.show()
+
+        self.profilesButton.setDisabled(False)
