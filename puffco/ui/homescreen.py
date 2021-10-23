@@ -152,7 +152,8 @@ class HomeScreen(QFrame):
 
                     active_prof_window.verified = True
 
-                if not active_prof_window.started:
+                if self.current_operating_state in (OperatingState.PREHEATING, OperatingState.HEATED) and \
+                        not active_prof_window.started:
                     # adjust the UI if we have not already done so
                     active_prof_window.start(send_command=False)
 
