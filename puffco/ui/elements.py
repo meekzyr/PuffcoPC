@@ -37,10 +37,18 @@ class DeviceVisualizer(QFrame):
 
 
 class WhiteImageButton(QPushButton):
-    def __init__(self, asset_path, parent, *, callback=None):
+    def __init__(self, asset_path, parent, *, callback=None, size=None):
         super(WhiteImageButton, self).__init__('', parent)
 
         pixmap = QPixmap(asset_path)
+        if size:
+            w, h = size
+            if w > pixmap.width():
+                w = pixmap.width()
+            if h > pixmap.height():
+                h = pixmap.height()
+            pixmap = pixmap.scaled(w, h)
+
         painter = QPainter(pixmap)
         painter.setCompositionMode(painter.CompositionMode_SourceIn)
         painter.fillRect(pixmap.rect(), QColor(255, 255, 255))
@@ -96,7 +104,6 @@ class ProfileButton(QAbstractButton):
         self.temperature.move(10, 60)
 
         self.glow = QLabel('', self)
-        # TODO: the image below is meant for the page when you select a profile.. recreate the proper arc traj+glow
         self.glow.setPixmap(QPixmap(':/assets/profile-glow.png'))
         self.glow.move(150, -30)
         b = QGraphicsBlurEffect()
@@ -164,7 +171,6 @@ class DataLabel(QLabel):
         self.heading.move(10, 5)
         self.heading.adjustSize()
         self.heading.setAlignment(Qt.AlignCenter)
-
         self._data = QLabel(data, self)
         self._data.move(15, 45)
         self._data.adjustSize()
@@ -210,7 +216,6 @@ class Battery(QFrame):
         self.eta.move(0, (self.percent.y() + self.percent.height()) + 3)
         self.eta.setMinimumWidth(200)
         self.eta.setScaledContents(True)
-
 
     def update_battery(self, percent: int, charging: bool, eta: str = None):
         if self.icon.x() != 50:

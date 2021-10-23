@@ -12,11 +12,13 @@ PROFILE_TO_BYT_ARRAY = {0: bytearray([0, 0, 0, 0]),
 
 class PuffcoBleakClient(BleakClient):
     attempted_devices = []
+    name = ''  # name of the connected device
 
     def __init__(self, **kwargs):
         super(PuffcoBleakClient, self).__init__('', **kwargs)
 
-    async def get_device_model(self, *, return_name=False) -> str:  # TODO: tie this into changing app bg/device visualization
+    async def get_device_model(self, *, return_name=False) -> str:
+        # TODO: tie this into changing app bg/device visualization
         model_number = (await self.read_gatt_char(Characteristics.MODEL_NUMBER)).decode()
         if return_name:
             return PeakProModels.get(model_number, 'UNKNOWN MODEL')
@@ -32,8 +34,12 @@ class PuffcoBleakClient(BleakClient):
         state = int(float(parse(await self.read_gatt_char(Characteristics.BATTERY_CHARGE_STATE))))
         return state in (0, 1)
 
-    async def preheat(self):
-        await self.write_gatt_char(Characteristics.COMMAND, bytearray([0, 0, 224, 64]))
+    async def preheat(self, cancel=False):
+        if cancel:
+            byte_arr = bytearray([0, 0, 0, 65])  # heatCycleAbort
+        else:
+            byte_arr = bytearray([0, 0, 224, 64])  # heatCycleStart
+        await self.write_gatt_char(Characteristics.COMMAND, byte_arr)
 
     async def get_battery_charge_eta(self):
         """
@@ -68,7 +74,7 @@ class PuffcoBleakClient(BleakClient):
     async def get_bowl_temperature(self, celsius=False):
         heater_temp_data = parse(await self.read_gatt_char(Characteristics.HEATER_TEMP))
         if heater_temp_data.lower() == 'nan':  # temp_celsius is nan when the atomizer is removed
-            return f'- - °{"C" if celsius else "F"}'
+            return f'--- °{"C" if celsius else "F"}'
         temp_celsius = float(heater_temp_data)
 
         if celsius:
@@ -134,24 +140,7 @@ class PuffcoBleakClient(BleakClient):
         temperature_data = parse(await self.read_gatt_char(Characteristics.PROFILE_PREHEAT_TEMP))
         return int(round(float(temperature_data), 1))
 
-    async def get_operating_state(self) -> int:
-        """
-        Operating States:
-            0 - "INIT_MEMORY"
-            1 - "INIT_VERSION_DISP"
-            2 - "INIT_BATTERY_DISP"
-            3 - "MASTER_OFF"
-            4 - SLEEP
-            5 - OFF "IDLE
-            6 - ON "TEMP SELECT"
-            7 - PREHEATING
-            8 - HEATED "CYCLE_ACTIVE"
-            9 - COOLDOWN "CYCLE_FADE"
-            10 - "VERSION_DISP"
-            11 - "BATTERY_DISP"
-            12 - "FACTORY TEST"
-            13 - BLE BONDING
-        """
+    async def get_operating_state(self) -> int:  # see btnet.OperatingStates
         operating_state = parse(await self.read_gatt_char(Characteristics.OPERATING_STATE))
         return int(float(operating_state))
 

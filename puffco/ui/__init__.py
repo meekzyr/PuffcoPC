@@ -117,33 +117,34 @@ class PuffcoMain(QMainWindow):
     async def connect(self, *, retry=False):
         if self._client.address == '':
             scanner = BleakScanner()
+            print('Scanning for Puffco products..')
             devices_found = await scanner.discover()
             for device in devices_found:
                 service_uuids = device.metadata.get('uuids')
                 device_mac_address = device.address
                 if device_mac_address in self._client.attempted_devices:
-                    print(f'skipping over {device.name} ({device_mac_address}, already failed to connect before')
+                    print(f'Ignoring {device.name} ({device_mac_address}), already failed to connect before')
                     continue
 
                 if Characteristics.SERVICE_UUID in service_uuids or device.address.startswith('84:2E:14:'):
-                    print('Potential Puffco Product', device.address, device.name)
+                    print(f'Potential Puffco Product "{device.name}" ({device.address})')
+                    self._client.name = device.name
                     self._client.address = device.address
                     break
 
             if self._client.address == '':
                 return await self.connect(retry=True)
 
-        # TODO: fix disconnect callback spam
-        #self._client.set_disconnected_callback(lambda *args: ensure_future(self._on_disconnect()).done())
-
         connected = False
+        timeout = False
         try:
             connected = await self._client.connect(timeout=3, use_cached=not retry)
             await self._on_connect()
-        except futures.TimeoutError as e:  # could not connect to device
-            print('timeout error', e)
+        except futures.TimeoutError:  # could not connect to device
+            print('Timed out while connecting, retrying..')
+            timeout = True
         except BleakError as e:  # could not find device
-            print('bleak error', e)
+            print(f'(BLEAK) "{e}", retrying..')
 
         if self.home.ui_connectStatus.text() != 'DISCONNECTED' and not connected:
             self.home.ui_connectStatus.setText('DISCONNECTED')
@@ -152,18 +153,19 @@ class PuffcoMain(QMainWindow):
         if connected:
             await self._client.pair()
         else:
-            print('Retrying..')
+            if not timeout:
+                print('Failed to connect, retrying..')
             return await self.connect(retry=True)
 
         print('Connected!')
         return connected
 
-    async def _on_disconnect(self):
+    async def on_disconnect(self, client):
         await self.home.reset()
         if not self.isVisible():
-            self.show()`
+            self.show()
 
-        print('lost connection to device, attempting to reconnect...')
+        print(f'Lost connection to "{client.name}" ({client.address}), attempting to reconnect...')
         await self.connect(retry=True)
 
     async def _on_connect(self):

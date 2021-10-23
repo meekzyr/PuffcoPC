@@ -9,6 +9,23 @@ class ChamberType(IntEnum):
     PERFORMANCE = 3
 
 
+class OperatingState(IntEnum):
+    INIT_MEMORY = 0
+    INIT_VERSION_DISPLAY = 1
+    INIT_BATTERY_DISPLAY = 2
+    MASTER_OFF = 3
+    SLEEP = 4
+    IDLE = 5
+    ON_TEMP_SELECT = 6  # pressing device button for profile switch
+    PREHEATING = 7
+    HEATED = 8
+    COOLDOWN = 9
+    VERSION_DISPLAY = 10
+    BATTERY_DISPLAY = 11
+    FACTORY_TEST = 12  # unknown
+    BONDING = 13  # BLE pairing
+
+
 PeakProModels = {
     '0': 'Peak Pro',
     '1': 'Opal Peak Pro',

@@ -1,7 +1,7 @@
 from asyncio import ensure_future
 from PyQt5.QtWidgets import QMainWindow, QLabel, QFrame, QSlider, QLineEdit
 from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtGui import QFont, QMouseEvent, QPixmap
+from PyQt5.QtGui import QFont, QMouseEvent, QPixmap, QPainter, QColor
 from PIL import Image
 
 from .elements import WhiteImageButton
@@ -52,35 +52,40 @@ class ColorSlider(QLabel):
 
 
 class ProfileSlider(QFrame):
-    def __init__(self, parent, title, s_min: int = 0, s_max: int = 0, value: int = 0, *, color=False, current='white'):
+    def __init__(self, parent, title: str, asset: str, _min: int = 0, _max: int = 0, value: int = 0, color=False, current='white'):
         self._title = title
         self._window = parent.parent()
         super(ProfileSlider, self).__init__(parent)
         self.setStyleSheet('background: transparent;')
-        self.setMinimumSize(parent.width(), 80)
-        self.setFixedHeight(50)
+        self.setMinimumSize(parent.width(), 90)
+        self.setFixedHeight(60)
         self.title = QLabel(title, self)
         self.title.setFont(QFont(self.font().defaultFamily(), 12))
         self.title.adjustSize()
         self.title.move(0, 0)
+
         if not color:
             self.slider = QSlider(Qt.Horizontal, self)
-            self.slider.setRange(s_min, s_max)
-            self.slider.setValue(value or s_min)
+            self.slider.setRange(_min, _max)
+            self.slider.setValue(value or _min)
             self.slider.setTickInterval(1)
             self.slider.setSingleStep(1)
-            self.slider.setFixedWidth(300)
+            self.slider.setFixedWidth(306)
             self.slider.move(50, self.title.height() + 15)
             self.slider.valueChanged.connect(self.value_changed)
+
+            self.icon = WhiteImageButton(asset, self, size=(24, 24))
+            self.icon.setDisabled(True)
+            self.icon.move(5, 30)
         else:
             self.preview = QLabel('', self)
-            self.preview.setFixedSize(24, 16)
-            self.preview.move(self.title.width() + 10, 2)
+            self.preview.setFixedSize(24, 18)
+            self.preview.move(self.title.x() + 5, self.title.y() + 27)
             self.preview.setStyleSheet(f'border: 1px solid white;'
                                        f'background-color: rgb{current};')
 
             self.slider = ColorSlider(self)
-            self.slider.move(50, self.title.height() + 15)
+            self.slider.move(52, self.title.height() + 15)
 
     @property
     def value(self):
@@ -110,14 +115,21 @@ class EditControls(QFrame):
         self.move(30, 320)
 
         # official app Fahrenheit range (400 - 620)
-        self.temperature_control = ProfileSlider(self, 'TEMPERATURE', s_min=200, s_max=620,
+        self.temperature_control = ProfileSlider(self, 'TEMPERATURE',
+                                                 ':/assets/icon_thermometer.png',
+                                                 _min=200, _max=620,
                                                  value=temperature)
+        self.temperature_control.icon.move(9, self.temperature_control.icon.y())
 
         # official app Duration range (15s - 120s)
-        self.duration_control = ProfileSlider(self, 'DURATION', s_min=15, s_max=120, value=duration)
+        self.duration_control = ProfileSlider(self, 'DURATION',
+                                              ':/assets/icon_clock.png',
+                                              _min=15, _max=120, value=duration)
         self.duration_control.move(0, 70)
 
-        self.color_control = ProfileSlider(self, 'COLOR', color=True, current=color)
+        self.color_control = ProfileSlider(self, 'COLOR',
+                                           ':/assets/icon_clock.png',
+                                           color=True, current=color)
         self.color_control.move(0, 140)
 
     async def write_to_device(self, old_name, old_temp, old_dur, old_color):
@@ -152,11 +164,15 @@ class EditControls(QFrame):
 
 
 class ProfileWindow(QMainWindow):
+    TEMP_DEFAULT_XY = (200, 320)
     SIZE = QSize(480, 480)
     PROFILE_NAME_MAX_LENGTH = 31
+    started = False
+    verified = False
 
     def __init__(self, parent, idx=0, _name='ALN TEST', _temp=475, raw_dur=15, _color=None):
         super(ProfileWindow, self).__init__(parent)
+        self.idx = idx
         self._name = _name
         self._temp = f'{_temp} °F'
         self.r_temp = _temp
@@ -173,9 +189,10 @@ class ProfileWindow(QMainWindow):
         self.p_name.setFont(font)
         self.p_name.setText(_name)
         self.p_name.adjustSize()
-        self.p_name.move(190, 40)
+        self.p_name.move(196, 36)
         self.p_name.setReadOnly(True)
         self.p_name.textEdited.connect(self.uppercase_text)
+        self.p_name.selectionChanged.connect(lambda: self.p_name.setSelection(0, 0))
 
         self.edit_button = WhiteImageButton(':/assets/iconmore.png', self, callback=self.edit_clicked)
         self.edit_button.resize(48, 48)
@@ -194,7 +211,27 @@ class ProfileWindow(QMainWindow):
 
         self.start_button = WhiteImageButton(':/icon/puffco-logo.png', self, callback=self.start)
         self.start_button.resize(64, 64)
-        self.start_button.move(190, 180)
+        self.start_button.move(207, 180)
+        self.cancel_button = WhiteImageButton(':/assets/iconclose.png', self, callback=lambda: self.done(cancel=True))
+        self.cancel_button.resize(48, 48)
+        self.cancel_button.move(210, 320)
+        self.cancel_button.hide()
+
+        self.start_text = QLabel('START', self)
+        self.start_text.setScaledContents(True)
+        self.start_text.setFixedSize(36, 24)
+        self.start_text.adjustSize()
+        self.start_text.setStyleSheet('background: transparent;')
+        self.start_text.move(self.start_button.x() + 13, self.start_button.y() +
+                             self.start_button.iconSize().height() + 5)
+
+        self.cancel_text = QLabel('CANCEL', self)
+        self.cancel_text.setScaledContents(True)
+        self.cancel_text.setFixedSize(48, 24)
+        self.cancel_text.setStyleSheet('background: transparent;')
+        self.cancel_text.move(self.cancel_button.x(), self.cancel_button.y() +
+                              self.cancel_button.iconSize().height() + 5)
+        self.cancel_text.hide()
 
         self.temperature = QLabel(self._temp, self)
         self.temperature.setFixedSize(150, 80)
@@ -202,27 +239,57 @@ class ProfileWindow(QMainWindow):
         font.setPointSize(28)
         font.setStretch(QFont.Unstretched)
         self.temperature.setFont(font)
-        self.temperature.move(190, 320)
+        self.temperature.move(*self.TEMP_DEFAULT_XY)
         self.temperature.setStyleSheet('background: transparent;')
 
         self.duration = QLabel(self._dur, self)
         self.duration.setStyleSheet('background: transparent;')
         self.duration.setFont(QFont('Slick', 12))
         self.duration.adjustSize()
-        self.duration.move(self.temperature.x() + 10, self.temperature.y() + 60)
+        self.duration.move(self.temperature.x() + 15, self.temperature.y() + 60)
 
         self.controls = EditControls(self, idx, _temp, raw_dur, _color)
-        self.controls.move(self.controls.x(), self.controls.y() - 60)
+        self.controls.move(self.controls.x() + 32, self.controls.y() - 60)
         self.controls.hide()
+
+        # todo: timer countdown
+        # todo: add boost time + temp buttons
 
     def uppercase_text(self, text):
         self.p_name.setText(str(text[:self.PROFILE_NAME_MAX_LENGTH]).upper())
         self.p_name.adjustSize()
 
-    def start(self):
-        ensure_future(client.preheat()).done()
+    def update_temp_reading(self, text):
+        self.temperature.setText(text)
 
-    def done(self, confirm=False):
+    def start(self, *, send_command=True):
+        if self.started:
+            return
+
+        self.start_text.hide()
+        self.start_button.hide()
+        self.cancel_button.show()
+        self.cancel_text.show()
+        self.edit_button.hide()
+
+        self.temperature.move(200, 183)
+        self.duration.move(self.temperature.x() + 15, self.temperature.y() + 60)
+        self.started = True
+        if send_command:
+            ensure_future(client.preheat()).done()
+
+    def cycle_finished(self):
+        self.started = False
+        self.verified = False
+        self.start_text.show()
+        self.start_button.show()
+        self.cancel_button.hide()
+        self.cancel_text.hide()
+        self.edit_button.show()
+        self.temperature.move(*self.TEMP_DEFAULT_XY)
+        self.duration.move(self.temperature.x() + 10, self.temperature.y() + 60)
+
+    def done(self, confirm=False, cancel=False):
         if not confirm:
             self.p_name.setText(self._name)
             self.temperature.setText(self._temp)
@@ -231,17 +298,27 @@ class ProfileWindow(QMainWindow):
             ensure_future(self.controls.write_to_device(self._name, self.r_temp, self.r_dur, self._color)).done()
             print('successfully wrote changes to profile')
 
+        if cancel:
+            ensure_future(client.preheat(cancel=True)).done()
+
+        self.started = False
+        self.p_name.selectionChanged.connect(lambda: self.p_name.setSelection(0, 0))
         self.p_name.setReadOnly(True)
+        self.start_text.show()
         self.start_button.show()
+        self.cancel_button.hide()
+        self.cancel_text.hide()
         self.edit_button.show()
         self.confirm_edit_button.hide()
         self.cancel_edit_button.hide()
-        self.temperature.move(190, 360)
+        self.temperature.move(*self.TEMP_DEFAULT_XY)
         self.duration.move(self.temperature.x() + 10, self.temperature.y() + 60)
         self.controls.hide()
 
     def edit_clicked(self):
+        self.p_name.selectionChanged.disconnect()
         self.p_name.setReadOnly(False)
+        self.start_text.hide()
         self.start_button.hide()
         self.edit_button.hide()
         self.confirm_edit_button.show()
