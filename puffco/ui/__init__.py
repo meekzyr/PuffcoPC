@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QPushButton, QMainWindow, QLabel
 from bleak import BleakError, BleakScanner
 
 from puffco.btnet import Characteristics
-from .elements import WhiteImageButton
+from .elements import ImageButton
 from .homescreen import HomeScreen
 from .profiles import HeatProfiles
 from .settings import Settings
@@ -44,12 +44,13 @@ class PuffcoMain(QMainWindow):
                            "color: rgb(255, 255, 255);\n"
                            "border: 0px;")
 
-        self.puffcoIcon = WhiteImageButton(':/icon/puffco-logo.png', self,
+        self.puffcoIcon = ImageButton(':/icon/puffco-logo.png', self,
                                            size=(64, 64))
         self.puffcoIcon.move(210, 0)
+        # from .control_center import ControlCenter
 
-        self.settings_window = Settings(self)
-        self.settings = WhiteImageButton(':/assets/icon_controlcenter.png', self,
+        self.settings_window = Settings(self) # ControlCenter(self)
+        self.settings = ImageButton(':/assets/icon_controlcenter.png', self,
                                          callback=self.display_settings, size=(36, 36))
         self.settings.move(self.width() - 70, 10)
 

@@ -36,9 +36,9 @@ class DeviceVisualizer(QFrame):
         self.led.update()
 
 
-class WhiteImageButton(QPushButton):
-    def __init__(self, asset_path, parent, *, callback=None, size=None):
-        super(WhiteImageButton, self).__init__('', parent)
+class ImageButton(QPushButton):
+    def __init__(self, asset_path, parent, *, callback=None, size=None, color=None, paint=True):
+        super(ImageButton, self).__init__('', parent)
 
         pixmap = QPixmap(asset_path)
         if size:
@@ -49,10 +49,11 @@ class WhiteImageButton(QPushButton):
                 h = pixmap.height()
             pixmap = pixmap.scaled(w, h)
 
-        painter = QPainter(pixmap)
-        painter.setCompositionMode(painter.CompositionMode_SourceIn)
-        painter.fillRect(pixmap.rect(), QColor(255, 255, 255))
-        painter.end()
+        if paint:
+            painter = QPainter(pixmap)
+            painter.setCompositionMode(painter.CompositionMode_SourceIn)
+            painter.fillRect(pixmap.rect(), color or QColor(255, 255, 255))
+            painter.end()
 
         self.setIconSize(pixmap.size())
         self.setIcon(QIcon(pixmap))
@@ -64,7 +65,7 @@ class WhiteImageButton(QPushButton):
 
     def resize(self, w: int, h: int) -> None:
         self.setIconSize(QSize(w, h))
-        return super(WhiteImageButton, self).resize(w, h)
+        return super(ImageButton, self).resize(w, h)
 
 
 class ProfileButton(QAbstractButton):

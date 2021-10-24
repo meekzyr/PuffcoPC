@@ -4,7 +4,7 @@ from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QFont, QMouseEvent, QPixmap, QPainter, QColor
 from PIL import Image
 
-from .elements import WhiteImageButton
+from .elements import ImageButton
 
 
 class ColorSlider(QLabel):
@@ -74,7 +74,7 @@ class ProfileSlider(QFrame):
             self.slider.move(50, self.title.height() + 15)
             self.slider.valueChanged.connect(self.value_changed)
 
-            self.icon = WhiteImageButton(asset, self, size=(24, 24))
+            self.icon = ImageButton(asset, self, size=(24, 24))
             self.icon.setDisabled(True)
             self.icon.move(5, 30)
         else:
@@ -194,25 +194,25 @@ class ProfileWindow(QMainWindow):
         self.p_name.textEdited.connect(self.uppercase_text)
         self.p_name.selectionChanged.connect(lambda: self.p_name.setSelection(0, 0))
 
-        self.edit_button = WhiteImageButton(':/assets/iconmore.png', self, callback=self.edit_clicked)
+        self.edit_button = ImageButton(':/assets/iconmore.png', self, callback=self.edit_clicked)
         self.edit_button.resize(48, 48)
         self.edit_button.move(self.width() - self.edit_button.width() - 10, 30)
 
-        self.cancel_edit_button = WhiteImageButton(':/assets/iconclose.png', self, callback=self.done)
+        self.cancel_edit_button = ImageButton(':/assets/iconclose.png', self, callback=self.done)
         self.cancel_edit_button.resize(48, 48)
         self.cancel_edit_button.move(10, self.edit_button.y())
         self.cancel_edit_button.hide()
 
-        self.confirm_edit_button = WhiteImageButton(':/assets/iconcheck.png', self,
+        self.confirm_edit_button = ImageButton(':/assets/iconcheck.png', self,
                                                     callback=lambda: self.done(confirm=True))
         self.confirm_edit_button.resize(48, 48)
         self.confirm_edit_button.move(self.edit_button.pos())
         self.confirm_edit_button.hide()
 
-        self.start_button = WhiteImageButton(':/icon/puffco-logo.png', self, callback=self.start)
+        self.start_button = ImageButton(':/icon/puffco-logo.png', self, callback=self.start)
         self.start_button.resize(64, 64)
         self.start_button.move(207, 180)
-        self.cancel_button = WhiteImageButton(':/assets/iconclose.png', self, callback=lambda: self.done(cancel=True))
+        self.cancel_button = ImageButton(':/assets/iconclose.png', self, callback=lambda: self.done(cancel=True))
         self.cancel_button.resize(48, 48)
         self.cancel_button.move(210, 320)
         self.cancel_button.hide()
