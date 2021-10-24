@@ -6,11 +6,11 @@ from PyQt5.QtCore import Qt, QSize
 class DeviceVisualizer(QFrame):
     def __init__(self, parent):
         super(DeviceVisualizer, self).__init__(parent)
-        self.move(210, 190)
+        self.move(215, 150)
         self.setStyleSheet('background: transparent;')
         self.device = QLabel('', self)
         self.device.setPixmap(QPixmap(":/assets/peak.png"))
-        self.device.resize(291, 511)
+        self.device.resize(291, 430)
         self.device.setScaledContents(True)
         self.led = QLabel('', self)
         self.led.setMaximumWidth(self.device.width() - 50)
@@ -68,12 +68,9 @@ class WhiteImageButton(QPushButton):
 
 
 class ProfileButton(QAbstractButton):
-    ID = 0
-
-    def __init__(self, parent, pixmap, geom):
+    def __init__(self, parent, i, pixmap, geom, *, callback):
         super(ProfileButton, self).__init__(parent)
-        self.setObjectName('ProfileButton-%d' % ProfileButton.ID)
-        ProfileButton.ID += 1
+        self.setObjectName(f'ProfileButton-{i}')
         self.setGeometry(*geom)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self._pixmap = pixmap
@@ -87,7 +84,7 @@ class ProfileButton(QAbstractButton):
 
         self.duration = QLabel('', self)
         self.duration.setFont(QFont('Slick', 11))
-        self.duration.move(350, 90)
+        self.duration.move(350, 80)
         self.duration.adjustSize()
 
         f = QFont(self.font().family(), 16)
@@ -101,7 +98,7 @@ class ProfileButton(QAbstractButton):
         f.setPointSize(32)
         f.setBold(True)
         self.temperature.setFont(f)
-        self.temperature.move(10, 60)
+        self.temperature.move(10, 50)
 
         self.glow = QLabel('', self)
         self.glow.setPixmap(QPixmap(':/assets/profile-glow.png'))
@@ -111,6 +108,7 @@ class ProfileButton(QAbstractButton):
         self.glow.setGraphicsEffect(b)
         self.glow.adjustSize()
         self.color = None
+        self.clicked.connect(lambda: callback(i))
 
     def pixmap(self):
         return self._pixmap

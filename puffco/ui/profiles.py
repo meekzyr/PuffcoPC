@@ -9,13 +9,16 @@ from .profile_window import ProfileWindow
 class HeatProfiles(QFrame):
     def __init__(self, parent):
         super(HeatProfiles, self).__init__(parent)
+        self.setMinimumSize(parent.width(), parent.height() - 135)
+        self.move(0, 60)
+        self.lower()
         self.setStyleSheet('background: transparent;')
         self.heading = QLabel('HEAT PROFILES', self)
         font = QFont(self.font().family(), 24)
         font.setStretch(font.Unstretched * 1.25)
         self.heading.setFont(font)
         self.heading.adjustSize()
-        self.heading.move(150, 70)
+        self.heading.move(150, 5)
         self.active_profile = None
 
         self.setVisible(False)
@@ -26,15 +29,11 @@ class HeatProfiles(QFrame):
         if self.profile_buttons:
             return
 
-        geom = [30, 0, self.parent().width() - 65, 120]
+        geom = [30, 70, self.parent().width() - 65, 110]  # x, y, w, h
         for i in range(0, 4):
-            geom[1] += geom[3] + 30  # offset 30px
-            self.profile_buttons[i] = ProfileButton(self, QPixmap(':/assets/data-gradient.png'), geom)
-
-        self.profile_buttons[0].clicked.connect(lambda: self.select_profile(0))
-        self.profile_buttons[1].clicked.connect(lambda: self.select_profile(1))
-        self.profile_buttons[2].clicked.connect(lambda: self.select_profile(2))
-        self.profile_buttons[3].clicked.connect(lambda: self.select_profile(3))
+            self.profile_buttons[i] = ProfileButton(self, i, QPixmap(':/assets/data-gradient.png'), geom,
+                                                    callback=self.select_profile)
+            geom[1] += geom[3] + 20  # offset 20px
 
     def select_profile(self, profile_num):
         if self.active_profile:

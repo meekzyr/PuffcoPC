@@ -30,7 +30,7 @@ class PuffcoMain(QMainWindow):
     RETRIES = 0
     PROFILES = []
     current_tab = 'home'
-    SIZE = QSize(480, 844)
+    SIZE = QSize(480, 720)
 
     def __init__(self, client):
         self._client = client
@@ -44,23 +44,23 @@ class PuffcoMain(QMainWindow):
                            "color: rgb(255, 255, 255);\n"
                            "border: 0px;")
 
-        self.puffcoIcon = QLabel('', self)
-        self.puffcoIcon.setGeometry(210, 5, 64, 64)
-        self.puffcoIcon.setStyleSheet("image: url(:/icon/puffco-logo.png);\n"
-                                      "background: transparent;\n")
+        self.puffcoIcon = WhiteImageButton(':/icon/puffco-logo.png', self,
+                                           size=(64, 64))
+        self.puffcoIcon.move(210, 0)
 
         self.settings_window = Settings(self)
-        self.settings = WhiteImageButton(':/assets/assets/icon-settings.png', self, callback=self.display_settings)
-        self.settings.move(self.width() - 70, 20)
+        self.settings = WhiteImageButton(':/assets/icon_controlcenter.png', self,
+                                         callback=self.display_settings, size=(36, 36))
+        self.settings.move(self.width() - 70, 10)
 
         self.home = HomeScreen(self)
-        self.profiles = HeatProfiles(self)
-        self.profiles.setGeometry(self.geometry())
+
         self.homeButton = QPushButton('MY PEAK', self)
-        btn_height = 70
-        self.homeButton.setGeometry(0, self.height() - btn_height, self.width() / 2, btn_height)  # x, y, w, h
+        self.homeButton.setGeometry(0, self.height() - 70, self.width() / 2, 70)
         self.homeButton.clicked.connect(lambda: self.show_tab(self.home))
 
+        self.profiles = HeatProfiles(self)
+        self.profiles.lower()
         self.profilesButton = QPushButton('HEAT PROFILES', self)
         self.profilesButton.setGeometry(self.homeButton.width() + 2, self.homeButton.y(),
                                         self.homeButton.width() - 2, self.homeButton.height())
@@ -73,12 +73,9 @@ class PuffcoMain(QMainWindow):
         divider.setGeometry(-92, self.homeButton.y() - 4, 573, 4)
         divider.setStyleSheet('background: transparent;')
 
-        self.setCentralWidget(self.home)
         # draw up the home screen upon launching the app
         self.home.setVisible(True)
         self.show()
-
-        #self.settings.raise_()
 
         QMetaObject.connectSlotsByName(self)
 
@@ -183,7 +180,7 @@ class PuffcoMain(QMainWindow):
         reset_idx = None
         # loop through the 4 profiles; fetching and storing the data for each of them
         for i in range(0, 4):
-            await self._client.change_profile(i)
+            await self._client.change_profile(i, current=True)
             name = await self._client.get_profile_name()
             if current_profile_name == name:
                 reset_idx = i
@@ -198,6 +195,9 @@ class PuffcoMain(QMainWindow):
         # reset the profile back to where it was
         if reset_idx is not None:
             await self._client.change_profile(reset_idx)
+
+        if self.profiles.isVisible():
+            self.profiles.setVisible(False)
 
         await self.profiles.fill()
         await self.home.fill(from_callback=True)

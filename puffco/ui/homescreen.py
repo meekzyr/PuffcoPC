@@ -14,22 +14,25 @@ class HomeScreen(QFrame):
 
     def __init__(self, parent):
         super(HomeScreen, self).__init__(parent)
+        self.setMinimumSize(parent.width(), parent.height() - 130)
+        self.move(0, 60)
+        self.lower()
         self.setStyleSheet('background: transparent;')
         self.device = DeviceVisualizer(self)
 
         self.ui_deviceName = QLabel('- - - -', self)
         self.ui_deviceName.setMinimumWidth(parent.width() // 2)
-        self.ui_deviceName.move(self.ui_deviceName.minimumWidth() // 2, 90)
+        self.ui_deviceName.move(self.ui_deviceName.minimumWidth() // 2, 10)
         self.ui_deviceName.setAlignment(Qt.AlignCenter)
         self.ui_deviceName.setWordWrap(False)
-        self.ui_deviceName.setStyleSheet('font-size: 36px;\n'
+        self.ui_deviceName.setStyleSheet('font-size: 30px;\n'
                                          'font-weight: bold;')
         self.ui_deviceName.adjustSize()
 
         self.statusLabel = QLabel('STATUS:', self)
         self.statusLabel.adjustSize()
         self.statusLabel.move((parent.width() // 3) + 10,
-                              self.ui_deviceName.y() + self.ui_deviceName.height() + 5)
+                              self.ui_deviceName.y() + self.ui_deviceName.height())
 
         self.statusLabel.setAlignment(Qt.AlignCenter)
         self.ui_connectStatus = QLabel('DISCONNECTED', self)
@@ -47,10 +50,10 @@ class HomeScreen(QFrame):
         self.ui_dailyDabCnt = DataLabel(self, heading='DAILY DABS:', data='- -')
         self.ui_totalDabCnt = DataLabel(self, heading='TOTAL DABS:', data='- -')
 
-        self.ui_activeProfile.move(20, 300)
-        self.ui_bowlTemp.move(20, 400)
-        self.ui_dailyDabCnt.move(20, 500)
-        self.ui_totalDabCnt.move(20, 600)
+        self.ui_activeProfile.move(30, 175)
+        self.ui_bowlTemp.move(30, 275)
+        self.ui_dailyDabCnt.move(30, 375)
+        self.ui_totalDabCnt.move(30, 475)
 
         # bring the device visualization to the front of the layout
         self.device.raise_()
