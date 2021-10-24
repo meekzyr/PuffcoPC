@@ -27,6 +27,7 @@ class Profile:
 
 
 class PuffcoMain(QMainWindow):
+    RETRIES = 0
     PROFILES = []
     current_tab = 'home'
     SIZE = QSize(480, 844)
@@ -115,10 +116,14 @@ class PuffcoMain(QMainWindow):
         other.setVisible(False)
 
     async def connect(self, *, retry=False):
+        if self.RETRIES >= 100:
+            raise ConnectionRefusedError('Could not connect to any devices.')
+
         if self._client.address == '':
             scanner = BleakScanner()
-            print('Scanning for Puffco products..')
+            print('Scanning for bluetooth devices..')
             devices_found = await scanner.discover()
+            print(f'{len(devices_found)} Bluetooth devices found.. looking for Puffco devices..')
             for device in devices_found:
                 service_uuids = device.metadata.get('uuids')
                 device_mac_address = device.address
@@ -153,10 +158,14 @@ class PuffcoMain(QMainWindow):
         if connected:
             await self._client.pair()
         else:
+            if retry:
+                self.RETRIES += 1
+
             if not timeout:
                 print('Failed to connect, retrying..')
             return await self.connect(retry=True)
 
+        self.RETRIES = 0
         print('Connected!')
         return connected
 
