@@ -37,12 +37,14 @@ class DeviceVisualizer(QFrame):
 
 
 class ImageButton(QPushButton):
-    def __init__(self, asset_path, parent, *, callback=None, size=None, color=None, paint=True):
-        super(ImageButton, self).__init__('', parent)
-
+    @staticmethod
+    def alter_pixmap(asset_path, size, paint, color):
         pixmap = QPixmap(asset_path)
         if size:
-            w, h = size
+            if isinstance(size, QSize):
+                w, h = size.width(), size.height()
+            else:
+                w, h = size
             if w > pixmap.width():
                 w = pixmap.width()
             if h > pixmap.height():
@@ -54,7 +56,12 @@ class ImageButton(QPushButton):
             painter.setCompositionMode(painter.CompositionMode_SourceIn)
             painter.fillRect(pixmap.rect(), color or QColor(255, 255, 255))
             painter.end()
+        return pixmap
 
+    def __init__(self, asset_path, parent, *, callback=None, size=None, color=None, paint=True):
+        super(ImageButton, self).__init__('', parent)
+        self.path = asset_path
+        pixmap = self.alter_pixmap(asset_path, size, paint, color)
         self.setIconSize(pixmap.size())
         self.setIcon(QIcon(pixmap))
         self.setStyleSheet('background: transparent;')

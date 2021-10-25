@@ -148,3 +148,10 @@ class PuffcoBleakClient(BleakClient):
         birthday = await self.read_gatt_char(Characteristics.DEVICE_BIRTHDAY)
         datetime_time = datetime.fromtimestamp(int(parseInt(birthday)))
         return str(datetime_time).split(" ")[0]
+
+    async def set_stealth_mode(self, enable: bool):
+        await self.write_gatt_char(Characteristics.STEALTH_STATUS, bytearray([int(enable), 0, 0, 0]))
+
+    async def get_stealth_mode(self):
+        mode = await self.read_gatt_char(Characteristics.STEALTH_STATUS)
+        return int(float(parse(mode)))

@@ -9,7 +9,7 @@ from puffco.btnet import Characteristics
 from .elements import ImageButton
 from .homescreen import HomeScreen
 from .profiles import HeatProfiles
-from .settings import Settings
+#from .settings import Settings
 
 
 class Profile:
@@ -47,11 +47,12 @@ class PuffcoMain(QMainWindow):
         self.puffcoIcon = ImageButton(':/icon/puffco-logo.png', self,
                                            size=(64, 64))
         self.puffcoIcon.move(210, 0)
-        # from .control_center import ControlCenter
+        from .control_center import ControlCenter
 
-        self.settings_window = Settings(self) # ControlCenter(self)
+        #self.settings_window = Settings(self)
+        self.control_center = ControlCenter(self)
         self.settings = ImageButton(':/assets/icon_controlcenter.png', self,
-                                         callback=self.display_settings, size=(36, 36))
+                                    callback=self.toggle_ctrl_center, size=(36, 36))
         self.settings.move(self.width() - 70, 10)
 
         self.home = HomeScreen(self)
@@ -80,10 +81,11 @@ class PuffcoMain(QMainWindow):
 
         QMetaObject.connectSlotsByName(self)
 
-    def display_settings(self, *args):
-        print('hey', args)
-
-        self.settings_window.show()
+    def toggle_ctrl_center(self):
+        if self.control_center.isHidden():
+            self.control_center.show()
+        else:
+            self.control_center.hide()
 
     def closeEvent(self, event):
         loop.stop()
@@ -176,6 +178,10 @@ class PuffcoMain(QMainWindow):
         await self.connect(retry=True)
 
     async def _on_connect(self):
+        for control in self.control_center.CONTROLS:
+            if settings.value(control._setting, False, bool):
+                control.on_click()
+
         current_profile_name = await self._client.get_profile_name()
 
         reset_idx = None

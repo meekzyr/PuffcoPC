@@ -54,6 +54,9 @@ class HomeScreen(QFrame):
         self.ui_bowlTemp.move(30, 275)
         self.ui_dailyDabCnt.move(30, 375)
         self.ui_totalDabCnt.move(30, 475)
+        if settings.value('Home/HideDabCounts', False, bool):
+            self.ui_dailyDabCnt.hide()
+            self.ui_totalDabCnt.hide()
 
         # bring the device visualization to the front of the layout
         self.device.raise_()
@@ -71,8 +74,9 @@ class HomeScreen(QFrame):
         self.setUpdatesEnabled(False)
         self.ui_activeProfile.reset_properties()
         self.ui_bowlTemp.reset_properties()
-        self.ui_dailyDabCnt.reset_properties()
-        self.ui_totalDabCnt.reset_properties()
+        if not settings.value('Home/HideDabCounts', False, bool):
+            self.ui_dailyDabCnt.reset_properties()
+            self.ui_totalDabCnt.reset_properties()
         self.setUpdatesEnabled(True)
 
     async def fill(self, *, from_callback=False):
@@ -93,8 +97,9 @@ class HomeScreen(QFrame):
             if from_callback:
                 self.ui_deviceName.setText(await client.get_device_name())
                 self.ui_deviceName.adjustSize()
-                self.ui_dailyDabCnt.update_data(await client.get_daily_dab_count())
-                self.ui_totalDabCnt.update_data(await client.get_total_dab_count())
+                if not settings.value('Home/HideDabCounts', False, bool):
+                    self.ui_dailyDabCnt.update_data(await client.get_daily_dab_count())
+                    self.ui_totalDabCnt.update_data(await client.get_total_dab_count())
 
         except bleak.BleakError:
             # no connection..
@@ -174,6 +179,14 @@ class HomeScreen(QFrame):
             return
 
         try:
+            led = self.device.led
+            if settings.value('Modes/Stealth', False, bool):
+                if not led.isHidden():
+                    led.hide()
+            else:
+                if led.isHidden():
+                    led.show()
+
             operating_state = await client.get_operating_state()
             if self.current_operating_state != operating_state:
                 # Handle operating state changes:
@@ -182,11 +195,12 @@ class HomeScreen(QFrame):
                     print(f'operating state changed {OperatingState(self.current_operating_state).name} --> {OperatingState(operating_state).name}')
                     if self.current_operating_state in (OperatingState.PREHEATING, OperatingState.HEATED):
                         # we just came out of a heat cycle, lets update the dab count
-                        total = await client.get_total_dab_count()
-                        if self.ui_totalDabCnt.data != total:  # check if our dab count has changed
-                            self.ui_totalDabCnt.update_data(total)
-                            # we can update the daily avg as well
-                            self.ui_dailyDabCnt.update_data(await client.get_daily_dab_count())
+                        if not settings.value('Home/HideDabCounts', False, bool):
+                            total = await client.get_total_dab_count()
+                            if self.ui_totalDabCnt.data != total:  # check if our dab count has changed
+                                self.ui_totalDabCnt.update_data(total)
+                                # we can update the daily avg as well
+                                self.ui_dailyDabCnt.update_data(await client.get_daily_dab_count())
 
                         active_prof_window = self.parent().profiles.active_profile
                         if active_prof_window and active_prof_window.started:
