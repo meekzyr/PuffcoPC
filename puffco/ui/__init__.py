@@ -44,8 +44,7 @@ class PuffcoMain(QMainWindow):
                            "color: rgb(255, 255, 255);\n"
                            "border: 0px;")
 
-        self.puffcoIcon = ImageButton(':/icon/puffco-logo.png', self,
-                                           size=(64, 64))
+        self.puffcoIcon = ImageButton(':/icon/puffco-logo.png', self, size=(64, 64))
         self.puffcoIcon.move(210, 0)
         from .control_center import ControlCenter
 
@@ -179,7 +178,7 @@ class PuffcoMain(QMainWindow):
 
     async def _on_connect(self):
         for control in self.control_center.CONTROLS:
-            if settings.value(control._setting, False, bool):
+            if settings.value(control.setting_name, False, bool):
                 control.on_click()
 
         current_profile_name = await self._client.get_profile_name()

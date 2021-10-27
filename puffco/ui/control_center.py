@@ -23,10 +23,12 @@ class ControlButton(ImageButton):
         self.btn_icon = ImageButton(asset_fp, self, size=size)
         self.btn_icon.move(65, 50)
         self.clicked.connect(self.on_click)
-        self._setting = setting
+        self.setting_name = setting
 
     def on_click(self):
         self.ENABLED = not self.ENABLED
+        settings.setValue(self.setting_name, self.ENABLED)
+
         color = QColor(255, 255, 255)
         if self.ENABLED:
             color = QColor(0, 0, 0)
@@ -40,7 +42,7 @@ class ControlButton(ImageButton):
         self.setIcon(QIcon(pixmap))
         pixmap = self.btn_icon.alter_pixmap(self.btn_icon.path, self.btn_icon.iconSize(), True, color)
         self.btn_icon.setIcon(QIcon(pixmap))
-        settings.setValue(self._setting, self.ENABLED)
+
         if self._callback:
             self._callback(self.ENABLED)
 
@@ -69,7 +71,7 @@ class ControlCenter(QFrame):
         self.lantern_mode.btn_icon.move(65, 45)
 
         self.ready_mode = ControlButton(self, 'READY\nMODE', ':/assets/icon_readymode.png', (26, 36),
-                                        'Modes/Ready', paint=False, callback=self.toggle_ready)
+                                        'Modes/Ready', paint=False)  # callback not needed here
         self.ready_mode.move(self.a.x() - 57, self.lantern_mode.y() + 100)
 
         self.stealth_mode = ControlButton(self, 'STEALTH\nMODE', ':/assets/icon_stealthmode.png', (42, 30),
@@ -82,7 +84,3 @@ class ControlCenter(QFrame):
     @staticmethod
     def toggle_stealth(enabled):
         ensure_future(client.set_stealth_mode(enabled)).done()
-
-    @staticmethod
-    def toggle_ready(enabled):
-        print(f'TODO, ready={enabled}')

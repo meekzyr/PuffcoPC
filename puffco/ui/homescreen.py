@@ -9,6 +9,7 @@ from puffco.btnet import OperatingState
 
 
 class HomeScreen(QFrame):
+    last_charging_state = None
     current_operating_state = None
     current_profile_id = None
 
@@ -188,6 +189,14 @@ class HomeScreen(QFrame):
                     led.show()
 
             operating_state = await client.get_operating_state()
+            if settings.value('Modes/Ready', False, bool) and operating_state not in \
+                    (OperatingState.PREHEATING, OperatingState.HEATED):
+                is_charging = await client.currently_charging
+                if self.last_charging_state is True and self.last_charging_state != is_charging:
+                    await client.preheat()
+
+                self.last_charging_state = is_charging
+
             if self.current_operating_state != operating_state:
                 # Handle operating state changes:
                 if self.current_operating_state:
