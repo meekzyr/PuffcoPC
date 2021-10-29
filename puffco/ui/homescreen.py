@@ -203,7 +203,16 @@ class HomeScreen(QFrame):
                     # todo: handle changes
                     print(f'operating state changed {OperatingState(self.current_operating_state).name} --> {OperatingState(operating_state).name}')
                     if self.current_operating_state in (OperatingState.PREHEATING, OperatingState.HEATED):
-                        # we just came out of a heat cycle, lets update the dab count
+                        # we just came out of a heat cycle
+                        await self.update_battery()
+
+                        # slow our temp reader, and make sure it is started/active
+                        # it will automatically stop once it hits 100*F
+                        self.temp_timer.setInterval(1000 * 3)
+                        if not self.temp_timer.isActive():
+                            self.temp_timer.start()
+
+                        # lets update the dab count
                         if not settings.value('Home/HideDabCounts', False, bool):
                             total = await client.get_total_dab_count()
                             if self.ui_totalDabCnt.data != total:  # check if our dab count has changed
@@ -211,9 +220,10 @@ class HomeScreen(QFrame):
                                 # we can update the daily avg as well
                                 self.ui_dailyDabCnt.update_data(await client.get_daily_dab_count())
 
-                        active_prof_window = self.parent().profiles.active_profile
-                        if active_prof_window and active_prof_window.started:
-                            active_prof_window.cycle_finished()
+                        if operating_state not in (OperatingState.PREHEATING, OperatingState.HEATED):
+                            active_prof_window = self.parent().profiles.active_profile
+                            if active_prof_window and active_prof_window.started:
+                                active_prof_window.cycle_finished()
 
                 self.current_operating_state = operating_state
 

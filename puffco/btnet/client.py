@@ -1,5 +1,5 @@
 from bleak import BleakClient
-from . import Characteristics, PeakProModels, parse, parseInt
+from . import Characteristics, Constants, PeakProModels, parse, parseInt
 
 from datetime import datetime
 import struct
@@ -71,7 +71,7 @@ class PuffcoBleakClient(BleakClient):
         raw_dpd_data = await self.read_gatt_char(Characteristics.DABS_PER_DAY)
         return str(round(float(parse(raw_dpd_data)), 1))
 
-    async def get_bowl_temperature(self, celsius=False):
+    async def get_bowl_temperature(self, celsius=False, integer=False):
         heater_temp_data = parse(await self.read_gatt_char(Characteristics.HEATER_TEMP))
         if heater_temp_data.lower() == 'nan':  # temp_celsius is nan when the atomizer is removed
             return f'--- °{"C" if celsius else "F"}'
@@ -79,9 +79,13 @@ class PuffcoBleakClient(BleakClient):
 
         if celsius:
             celsius = int(temp_celsius)
+            if integer:
+                return celsius
             return f'{celsius} °C'
 
         fahrenheit = int(((temp_celsius * 1.8) + 32))
+        if integer:
+            return fahrenheit
         return f'{fahrenheit} °F'
 
     async def get_device_name(self):
@@ -155,3 +159,32 @@ class PuffcoBleakClient(BleakClient):
     async def get_stealth_mode(self):
         mode = await self.read_gatt_char(Characteristics.STEALTH_STATUS)
         return int(float(parse(mode)))
+
+    async def get_target_temp(self):
+        return float(parse(await self.read_gatt_char(Characteristics.HEATER_TARGET_TEMP)))
+
+    async def boost(self, val: float, is_time: bool = False):
+        if is_time:
+            char = Characteristics.TIME_OVERRIDE
+            total = max(await self.get_state_ttime(), 0)
+            elapsed = max(total - val, 0)
+            elapsed += Constants.DABBING_ADDED_TIME
+            val = elapsed
+        else:
+            char = Characteristics.TEMPERATURE_OVERRIDE
+            target_temp = await self.get_target_temp()  # celsius
+            increment = Constants.DABBING_ADDED_TEMP_CELSIUS
+            # NOTE: DABBING_ADDED_TEMP_FAHRENHEIT is unused because it causes a HUGE increase in bowl temp
+
+            # fe((0, b.bleAddDabbingTemp)(targetTemp - profileBaseTemp + At, Ne))
+            # At = DABBING_ADDED_TEMP_CELSIUS or DABBING_ADDED_TEMP_FAHRENHEIT
+            # Ne = temp. unit (converts to celsius prior to sending to device)
+            val = target_temp - val + increment
+
+        await self.write_gatt_char(char, struct.pack('f', val))
+
+    async def get_state_etime(self):
+        return float(parse(await self.read_gatt_char(Characteristics.STATE_ELAPSED_TIME)))
+
+    async def get_state_ttime(self):
+        return float(parse(await self.read_gatt_char(Characteristics.STATE_TOTAL_TIME)))

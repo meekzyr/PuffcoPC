@@ -1,7 +1,7 @@
 from asyncio import ensure_future
 from PyQt5.QtWidgets import QMainWindow, QLabel, QFrame, QSlider, QLineEdit
-from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtGui import QFont, QMouseEvent, QPixmap, QPainter, QColor
+from PyQt5.QtCore import QSize, Qt, QTimer
+from PyQt5.QtGui import QFont, QMouseEvent, QPixmap
 from PIL import Image
 
 from .elements import ImageButton
@@ -253,7 +253,40 @@ class ProfileWindow(QMainWindow):
         self.controls.hide()
 
         # todo: timer countdown
-        # todo: add boost time + temp buttons
+        self.temp_boost = ImageButton(':/assets/icon_boost_temp.png', self, paint=False, size=(54, 54),
+                                      callback=self.send_boost)
+        self.temp_boost.move(self.width() - 130, self.height() - 100)
+        self.time_boost = ImageButton(':/assets/icon_boost_time.png', self, paint=False, size=(54, 54),
+                                      callback=lambda: self.send_boost(boost_time=True))
+        self.time_boost.move((self.width() / 4) - 50, self.height() - 100)
+
+        self.temp_boost.hide()
+        self.time_boost.hide()
+
+        self.stopwatch = QTimer(self)
+        self.stopwatch.setInterval(1000)
+        self.stopwatch.timeout.connect(lambda: ensure_future(self.update_stopwatch()).done())
+
+    async def update_stopwatch(self):
+        time_left = max(self.r_dur, await client.get_state_ttime()) - await client.get_state_etime()
+        if time_left == float('inf'):
+            self.duration.setText(self._dur)
+            self.stopwatch.stop()
+            return
+
+        seconds_left = int(round(time_left, 2))
+        m, s = divmod(seconds_left, 60)
+        m = str(int(m)).zfill(2)
+        s = str(int(s)).zfill(2)
+        self.duration.setText(f'{m}:{s}')
+
+    def send_boost(self, *, boost_time=False):
+        val = self.r_dur
+        if not boost_time:
+            profile = self.parent().PROFILES[self.idx]
+            val = profile.temperature
+
+        ensure_future(client.boost(val, is_time=boost_time)).done()
 
     def uppercase_text(self, text):
         self.p_name.setText(str(text[:self.PROFILE_NAME_MAX_LENGTH]).upper())
@@ -271,22 +304,31 @@ class ProfileWindow(QMainWindow):
         self.cancel_button.show()
         self.cancel_text.show()
         self.edit_button.hide()
+        self.time_boost.show()
+        self.temp_boost.show()
 
         self.temperature.move(200, 183)
+        self.stopwatch.start()
         self.duration.move(self.temperature.x() + 15, self.temperature.y() + 60)
         self.started = True
         if send_command:
             ensure_future(client.preheat()).done()
 
     def cycle_finished(self):
+        if self.stopwatch.isActive():
+            self.stopwatch.stop()
+
         self.started = False
         self.verified = False
         self.start_text.show()
         self.start_button.show()
         self.cancel_button.hide()
         self.cancel_text.hide()
+        self.time_boost.hide()
+        self.temp_boost.hide()
         self.edit_button.show()
         self.temperature.move(*self.TEMP_DEFAULT_XY)
+        self.duration.setText(self._dur)
         self.duration.move(self.temperature.x() + 10, self.temperature.y() + 60)
 
     def done(self, confirm=False, cancel=False):

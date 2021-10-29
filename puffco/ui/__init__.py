@@ -17,7 +17,7 @@ class Profile:
         self.idx = idx
         self.name = name
         self.temperature = temperature
-        self.temperature_f = round((temperature * 1.8) + 32)
+        self.temperature_f = round(9.0/5.0 * temperature + 32)
         self.duration = time
         self.color = color
         self.color_bytes = color_bytes
@@ -162,6 +162,8 @@ class PuffcoMain(QMainWindow):
 
             if not timeout:
                 print('Failed to connect, retrying..')
+
+            await sleep(2.5)  # reconnectDelayMs: 2500
             return await self.connect(retry=True)
 
         self.RETRIES = 0
@@ -186,7 +188,7 @@ class PuffcoMain(QMainWindow):
         reset_idx = None
         # loop through the 4 profiles; fetching and storing the data for each of them
         for i in range(0, 4):
-            await self._client.change_profile(i, current=True)
+            await self._client.change_profile(i)
             name = await self._client.get_profile_name()
             if current_profile_name == name:
                 reset_idx = i

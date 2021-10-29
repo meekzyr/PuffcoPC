@@ -59,24 +59,24 @@ class ControlCenter(QFrame):
         self.title.setStyleSheet('background: transparent;')
         self.title.move((parent.width() / 2) - (self.title.width() / 2), 20)
 
-        self.a = ImageButton(':/assets/icon_rocket.png', self, paint=False, size=(54, 54))
-        self.a.move((parent.width() / 2), 150)
+        self.boost_controls = ImageButton(':/assets/icon_rocket.png', self, paint=False, size=(54, 54))
+        self.boost_controls.move((parent.width() / 2), 150)
 
         self.power_button = ImageButton(':/assets/icon_light_powermode.png', self, paint=False, size=(54, 54))
         self.power_button.move((parent.width()/2) + 70, 150)
 
         self.lantern_mode = ControlButton(self, 'LANTERN\nMODE', ':/assets/icon_lanternmode.png', (26, 42),
                                           'Modes/Lantern', paint=False)
-        self.lantern_mode.move(self.a.x() - 57, self.power_button.y() + 45)
+        self.lantern_mode.move(self.boost_controls.x() - 57, self.power_button.y() + 45)
         self.lantern_mode.btn_icon.move(65, 45)
 
         self.ready_mode = ControlButton(self, 'READY\nMODE', ':/assets/icon_readymode.png', (26, 36),
                                         'Modes/Ready', paint=False)  # callback not needed here
-        self.ready_mode.move(self.a.x() - 57, self.lantern_mode.y() + 100)
+        self.ready_mode.move(self.boost_controls.x() - 57, self.lantern_mode.y() + 100)
 
         self.stealth_mode = ControlButton(self, 'STEALTH\nMODE', ':/assets/icon_stealthmode.png', (42, 30),
                                           'Modes/Stealth', paint=False, callback=self.toggle_stealth)
-        self.stealth_mode.move(self.a.x() - 57, self.ready_mode.y() + 100)
+        self.stealth_mode.move(self.boost_controls.x() - 57, self.ready_mode.y() + 100)
         self.stealth_mode.btn_icon.move(55, 50)
 
         self.CONTROLS = [self.lantern_mode, self.ready_mode, self.stealth_mode]
