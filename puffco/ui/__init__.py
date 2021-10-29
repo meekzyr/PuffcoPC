@@ -179,6 +179,8 @@ class PuffcoMain(QMainWindow):
         await self.connect(retry=True)
 
     async def _on_connect(self):
+        self._client.set_disconnected_callback(lambda *args: ensure_future(self.on_disconnect(*args)))
+
         for control in self.control_center.CONTROLS:
             if settings.value(control.setting_name, False, bool):
                 control.on_click()
