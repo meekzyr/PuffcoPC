@@ -12,6 +12,7 @@ class HomeScreen(QFrame):
     last_charging_state = None
     current_operating_state = None
     current_profile_id = None
+    count = 0
 
     def __init__(self, parent):
         super(HomeScreen, self).__init__(parent)
@@ -179,6 +180,8 @@ class HomeScreen(QFrame):
         if not client.is_connected:
             return
 
+        self.count += 1
+
         try:
             led = self.device.led
             if settings.value('Modes/Stealth', False, bool):
@@ -189,11 +192,15 @@ class HomeScreen(QFrame):
                     led.show()
 
             operating_state = await client.get_operating_state()
-            if settings.value('Modes/Ready', False, bool) and operating_state not in \
-                    (OperatingState.PREHEATING, OperatingState.HEATED):
+            if operating_state not in (OperatingState.PREHEATING, OperatingState.HEATED):
                 is_charging = await client.currently_charging
-                if self.last_charging_state is True and self.last_charging_state != is_charging:
+                if settings.value('Modes/Ready', False, bool) and (self.last_charging_state is True
+                                                                   and self.last_charging_state != is_charging):
                     await client.preheat()
+
+                # if we are charging, update the battery status every minute
+                if is_charging and self.count % 30 == 0:
+                    await self.update_battery()
 
                 self.last_charging_state = is_charging
 
