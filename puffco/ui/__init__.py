@@ -12,7 +12,7 @@ from .themes import DEVICE_THEME_MAP
 from .elements import ImageButton
 from .homescreen import HomeScreen
 from .profiles import HeatProfiles
-#from .settings import Settings
+from .control_center import ControlCenter
 
 
 class Profile:
@@ -49,9 +49,7 @@ class PuffcoMain(QMainWindow):
 
         self.puffcoIcon = ImageButton(':/logo.png', self, size=(64, 64))
         self.puffcoIcon.move(210, 0)
-        from .control_center import ControlCenter
 
-        #self.settings_window = Settings(self)
         self.control_center = ControlCenter(self)
         self.settings = ImageButton(':/icons/control_center.png', self,
                                     callback=self.toggle_ctrl_center, size=(36, 36),
