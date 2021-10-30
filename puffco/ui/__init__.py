@@ -51,10 +51,11 @@ class PuffcoMain(QMainWindow):
         self.puffcoIcon.move(210, 0)
 
         self.control_center = ControlCenter(self)
-        self.settings = ImageButton(':/icons/control_center.png', self,
-                                    callback=self.toggle_ctrl_center, size=(36, 36),
-                                    color=QColor(*theme.TEXT_COLOR))
-        self.settings.move(self.width() - 70, 10)
+        self.ctrl_center_btn = ImageButton(':/icons/control_center.png', self,
+                                           callback=self.toggle_ctrl_center, size=(36, 36),
+                                           color=QColor(*theme.TEXT_COLOR))
+        self.ctrl_center_btn.move(self.width() - 70, 10)
+        self.ctrl_center_btn.setDisabled(True)
 
         self.home = HomeScreen(self)
 
@@ -183,6 +184,8 @@ class PuffcoMain(QMainWindow):
     async def _on_connect(self):
         self._client.set_disconnected_callback(lambda *args: ensure_future(self.on_disconnect(*args)))
         # Set the app theme (upon first launch):
+        self.ctrl_center_btn.setDisabled(False)
+
         if settings.value('General/Theme', 'unset', str) == 'unset':
             model = await self._client.get_device_model()
             if model not in DEVICE_THEME_MAP:
@@ -197,10 +200,10 @@ class PuffcoMain(QMainWindow):
                                    f"color: rgb{theme.TEXT_COLOR};\n"
                                    "border: 0px;")
 
-                pixmap = self.settings.alter_pixmap(self.settings.path, size=(36, 36),
-                                                    paint=True, color=QColor(*theme.TEXT_COLOR))
-                self.settings.setIconSize(pixmap.size())
-                self.settings.setIcon(QIcon(pixmap))
+                pixmap = self.ctrl_center_btn.alter_pixmap(self.ctrl_center_btn.path, size=(36, 36),
+                                                           paint=True, color=QColor(*theme.TEXT_COLOR))
+                self.ctrl_center_btn.setIconSize(pixmap.size())
+                self.ctrl_center_btn.setIcon(QIcon(pixmap))
 
                 self.home.device.device.setPixmap(QPixmap(theme.DEVICE))
                 self.home.device.device.resize(291, 430)
@@ -217,7 +220,15 @@ class PuffcoMain(QMainWindow):
 
         # Activate control center buttons:
         for control in self.control_center.CONTROLS:
-            if settings.value(control.setting_name, False, bool):
+            value = settings.value(control.setting_name, False, bool)
+
+            if 'lantern' in control.setting_name.lower():
+                # send the lantern status and continue. we do not want to activate the button,
+                # as that will cause the lantern UI to appear upon opening control center
+                await self._client.send_lantern_status(True)
+                continue
+
+            if value:
                 control.on_click()
 
         current_profile_name = await self._client.get_profile_name()

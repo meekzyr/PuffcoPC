@@ -186,3 +186,10 @@ class PuffcoBleakClient(BleakClient):
 
     async def get_state_ttime(self):
         return float(parse(await self.read_gatt_char(Characteristics.STATE_TOTAL_TIME)))
+
+    async def send_lantern_status(self, status: bool):
+        await self.write_gatt_char(Characteristics.LANTERN_STATUS, bytearray([int(status), 0, 0, 0]))
+
+    async def send_lantern_color(self, color):
+        await self.write_gatt_char(Characteristics.LANTERN_COLOR,
+                                   bytearray([int(color[0]), int(color[1]), int(color[2]), 0, 1, 0, 0, 0]))

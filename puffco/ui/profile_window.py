@@ -8,14 +8,15 @@ from .elements import ImageButton
 
 
 class ColorSlider(QLabel):
+    ASSET = 'rainbow_slider.png'
     selecting = False
     selected = None
 
     def __init__(self, parent):
         super(ColorSlider, self).__init__('', parent)
         self.setMouseTracking(True)
-        pixmap = QPixmap(':assets/rainbow_slider.png')
-        self.image = Image.fromqpixmap(pixmap).convert('RGB')
+        pixmap = QPixmap(f':assets/{self.ASSET}')
+        self.image = Image.fromqpixmap(pixmap)
         self.setPixmap(pixmap)
         self.setFixedSize(self.pixmap().size())
 
@@ -31,7 +32,12 @@ class ColorSlider(QLabel):
         if x >= self.image.width:
             x = self.image.width - 1
 
-        self.selected = self.image.getpixel((max(0, x), max(0, y)))
+        pixel_color = self.image.getpixel((max(0, x), max(0, y)))
+        if not sum(pixel_color):
+            # there is no color here
+            return
+
+        self.selected = pixel_color
         self.parent().preview.setStyleSheet(f'background: rgb{self.selected};'
                                             f'border: 1px solid white;')
 
@@ -198,7 +204,7 @@ class ProfileWindow(QMainWindow):
         self.edit_button.resize(48, 48)
         self.edit_button.move(self.width() - self.edit_button.width() - 10, 30)
 
-        self.cancel_edit_button = ImageButton(':/icons/close.png', self, callback=self.done)
+        self.cancel_edit_button = ImageButton(':/icons/cancel.png', self, callback=self.done)
         self.cancel_edit_button.resize(48, 48)
         self.cancel_edit_button.move(10, self.edit_button.y())
         self.cancel_edit_button.hide()
@@ -212,7 +218,7 @@ class ProfileWindow(QMainWindow):
         self.start_button = ImageButton(':/misc/logo.png', self, callback=self.start)
         self.start_button.resize(64, 64)
         self.start_button.move(207, 180)
-        self.cancel_button = ImageButton(':/icons/close.png', self, callback=lambda: self.done(cancel=True))
+        self.cancel_button = ImageButton(':/icons/cancel.png', self, callback=lambda: self.done(cancel=True))
         self.cancel_button.resize(48, 48)
         self.cancel_button.move(210, 320)
         self.cancel_button.hide()

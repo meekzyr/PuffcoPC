@@ -10,6 +10,7 @@ from puffco.btnet import OperatingState
 
 class HomeScreen(QFrame):
     last_charging_state = [None, None]
+    last_selection = None
     current_operating_state = None
     current_profile_id = None
     count = 0
@@ -183,6 +184,13 @@ class HomeScreen(QFrame):
         self.count += 1
 
         try:
+            lantern_settings = self.parent().control_center.lantern_settings
+            if lantern_settings.isHidden() is False and lantern_settings.wheel.selected:
+                if self.last_selection != lantern_settings.wheel.selected:
+                    await client.send_lantern_color(lantern_settings.wheel.selected)
+
+                self.last_selection = lantern_settings.wheel.selected
+
             led = self.device.led
             if settings.value('Modes/Stealth', False, bool):
                 if not led.isHidden():
