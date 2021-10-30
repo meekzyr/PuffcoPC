@@ -239,7 +239,7 @@ class PuffcoMain(QMainWindow):
 
         # reset the profile back to where it was
         if reset_idx is not None:
-            await self._client.change_profile(reset_idx)
+            await self._client.change_profile(reset_idx, current=True)
 
         if self.profiles.isVisible():
             self.profiles.setVisible(False)
