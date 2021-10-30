@@ -31,7 +31,7 @@ class HeatProfiles(QFrame):
 
         geom = [30, 70, self.parent().width() - 65, 110]  # x, y, w, h
         for i in range(0, 4):
-            self.profile_buttons[i] = ProfileButton(self, i, QPixmap(':/assets/data-gradient.png'), geom,
+            self.profile_buttons[i] = ProfileButton(self, i, QPixmap(theme.HOME_DATA), geom,
                                                     callback=self.select_profile)
             geom[1] += geom[3] + 20  # offset 20px
 

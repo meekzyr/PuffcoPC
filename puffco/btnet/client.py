@@ -18,7 +18,6 @@ class PuffcoBleakClient(BleakClient):
         super(PuffcoBleakClient, self).__init__('', **kwargs)
 
     async def get_device_model(self, *, return_name=False) -> str:
-        # TODO: tie this into changing app bg/device visualization
         model_number = (await self.read_gatt_char(Characteristics.MODEL_NUMBER)).decode()
         if return_name:
             return PeakProModels.get(model_number, 'UNKNOWN MODEL')

@@ -9,20 +9,22 @@ class DeviceVisualizer(QFrame):
         self.move(215, 150)
         self.setStyleSheet('background: transparent;')
         self.device = QLabel('', self)
-        self.device.setPixmap(QPixmap(":/assets/basic_peak.png"))
+        self.device.setPixmap(QPixmap(theme.DEVICE))
         self.device.resize(291, 430)
         self.device.setScaledContents(True)
         self.led = QLabel('', self)
-        self.led.setMaximumWidth(self.device.width() - 50)
-        self.led.resize(self.device.size())
+        self.led.setFixedHeight(self.device.height())
+        self.led.setMaximumWidth(self.device.width() - theme.LIGHTING_WIDTH_ADJ)
 
-        self.led.setPixmap(QPixmap(":/assets/basic_lighting.png"))
+        self.led.setPixmap(QPixmap(theme.LIGHTING))
         self.led.setScaledContents(True)
         self.led.setAlignment(Qt.AlignCenter)
         self.led.setStyleSheet(None)
+        self.color = None
 
     def colorize(self, r: int, g: int, b: int, alpha: int = 255):
-        pixmap = QPixmap(":/assets/basic_lighting.png")
+        self.color = (r, g, b)
+        pixmap = QPixmap(theme.LIGHTING)
         painter = QPainter(pixmap)
         painter.setCompositionMode(painter.CompositionMode_SourceIn)
         painter.fillRect(pixmap.rect(), QColor(r, g, b, alpha))
@@ -167,7 +169,7 @@ class DataLabel(QLabel):
 
         super(DataLabel, self).__init__('', parent)
         self.setStyleSheet('background: transparent;')
-        self.setPixmap(QPixmap(':/assets/data-gradient.png'))
+        self.setPixmap(QPixmap(theme.HOME_DATA))
         self.setScaledContents(True)
         self.setMaximumSize(340, 80)
         self.setMinimumSize(280, 80)

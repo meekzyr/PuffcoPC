@@ -1,11 +1,14 @@
+import builtins
+
 from asyncio import futures, ensure_future, sleep
 from PyQt5.QtCore import QSize, QMetaObject
-from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtGui import QIcon, QPixmap, QColor
 from PyQt5.QtWidgets import QPushButton, QMainWindow, QLabel
 
 from bleak import BleakError, BleakScanner
 
 from puffco.btnet import Characteristics
+from .themes import DEVICE_THEME_MAP
 from .elements import ImageButton
 from .homescreen import HomeScreen
 from .profiles import HeatProfiles
@@ -40,8 +43,8 @@ class PuffcoMain(QMainWindow):
         self.setMaximumSize(self.SIZE)
         self.setMouseTracking(True)
         self.setWindowIcon(QIcon(":/puffco.ico"))
-        self.setStyleSheet("background-image: url(:/assets/background.png);\n"
-                           "color: rgb(255, 255, 255);\n"
+        self.setStyleSheet(f"background-image: url({theme.BACKGROUND});\n"
+                           f"color: rgb{theme.TEXT_COLOR};\n"
                            "border: 0px;")
 
         self.puffcoIcon = ImageButton(':/logo.png', self, size=(64, 64))
@@ -51,7 +54,8 @@ class PuffcoMain(QMainWindow):
         #self.settings_window = Settings(self)
         self.control_center = ControlCenter(self)
         self.settings = ImageButton(':/icons/control_center.png', self,
-                                    callback=self.toggle_ctrl_center, size=(36, 36))
+                                    callback=self.toggle_ctrl_center, size=(36, 36),
+                                    color=QColor(*theme.TEXT_COLOR))
         self.settings.move(self.width() - 70, 10)
 
         self.home = HomeScreen(self)
@@ -180,7 +184,40 @@ class PuffcoMain(QMainWindow):
 
     async def _on_connect(self):
         self._client.set_disconnected_callback(lambda *args: ensure_future(self.on_disconnect(*args)))
+        # Set the app theme (upon first launch):
+        if settings.value('General/Theme', 'unset', str) == 'unset':
+            model = await self._client.get_device_model()
+            if model not in DEVICE_THEME_MAP:
+                print(f'unknown device model {model}')
+                builtins.theme = theme = DEVICE_THEME_MAP['0']  # basic/default
+            else:
+                builtins.theme = theme = DEVICE_THEME_MAP[model]
 
+            settings.setValue('General/Theme', theme.name)
+            if theme.name != 'basic':
+                self.setStyleSheet(f"background-image: url({theme.BACKGROUND});\n"
+                                   f"color: rgb{theme.TEXT_COLOR};\n"
+                                   "border: 0px;")
+
+                pixmap = self.settings.alter_pixmap(self.settings.path, size=(36, 36),
+                                                    paint=True, color=QColor(*theme.TEXT_COLOR))
+                self.settings.setIconSize(pixmap.size())
+                self.settings.setIcon(QIcon(pixmap))
+
+                self.home.device.device.setPixmap(QPixmap(theme.DEVICE))
+                self.home.device.device.resize(291, 430)
+
+                self.home.device.led.setMaximumWidth(self.home.device.device.width() - theme.LIGHTING_WIDTH_ADJ)
+                self.home.device.led.setPixmap(QPixmap(theme.LIGHTING))
+                self.home.device.led.resize(self.home.device.device.width() - theme.LIGHTING_WIDTH_ADJ, self.home.device.device.height())
+                if self.home.device.color:
+                    self.home.device.colorize(*self.home.device.color)
+
+                for button in self.profiles.profile_buttons.values():
+                    button._pixmap = QPixmap(theme.HOME_DATA)
+                    button.update()
+
+        # Activate control center buttons:
         for control in self.control_center.CONTROLS:
             if settings.value(control.setting_name, False, bool):
                 control.on_click()
