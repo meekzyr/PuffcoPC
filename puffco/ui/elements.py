@@ -9,20 +9,20 @@ class DeviceVisualizer(QFrame):
         self.move(215, 150)
         self.setStyleSheet('background: transparent;')
         self.device = QLabel('', self)
-        self.device.setPixmap(QPixmap(":/assets/peak.png"))
+        self.device.setPixmap(QPixmap(":/assets/basic_peak.png"))
         self.device.resize(291, 430)
         self.device.setScaledContents(True)
         self.led = QLabel('', self)
         self.led.setMaximumWidth(self.device.width() - 50)
         self.led.resize(self.device.size())
 
-        self.led.setPixmap(QPixmap(":/assets/peakLED.png"))
+        self.led.setPixmap(QPixmap(":/assets/basic_lighting.png"))
         self.led.setScaledContents(True)
         self.led.setAlignment(Qt.AlignCenter)
         self.led.setStyleSheet(None)
 
     def colorize(self, r: int, g: int, b: int, alpha: int = 255):
-        pixmap = QPixmap(":/assets/peakLED.png")
+        pixmap = QPixmap(":/assets/basic_lighting.png")
         painter = QPainter(pixmap)
         painter.setCompositionMode(painter.CompositionMode_SourceIn)
         painter.fillRect(pixmap.rect(), QColor(r, g, b, alpha))
