@@ -42,7 +42,7 @@ class PuffcoMain(QMainWindow):
         self.setMinimumSize(self.SIZE)
         self.setMaximumSize(self.SIZE)
         self.setMouseTracking(True)
-        self.setWindowIcon(QIcon(":/puffco.ico"))
+        self.setWindowIcon(QIcon(":/misc/puffco.ico"))
         self.setStyleSheet(f"background-image: url({theme.BACKGROUND});\n"
                            f"color: rgb{theme.TEXT_COLOR};\n"
                            "border: 0px;")
