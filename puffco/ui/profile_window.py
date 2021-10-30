@@ -252,7 +252,6 @@ class ProfileWindow(QMainWindow):
         self.controls.move(self.controls.x() + 32, self.controls.y() - 60)
         self.controls.hide()
 
-        # todo: timer countdown
         self.temp_boost = ImageButton(':/assets/icon_boost_temp.png', self, paint=False, size=(54, 54),
                                       callback=self.send_boost)
         self.temp_boost.move(self.width() - 130, self.height() - 100)

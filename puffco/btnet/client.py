@@ -24,15 +24,14 @@ class PuffcoBleakClient(BleakClient):
             return PeakProModels.get(model_number, 'UNKNOWN MODEL')
         return model_number
 
-    @property
-    async def currently_charging(self):
+    async def is_currently_charging(self):
         # (0, CHARGING - BULK)
         # (1, CHARGING - TOPUP)
         # (2, NOT CHARGING - FULL, cable connected)
         # (3, NOT CHARGING - OVERTEMP)
         # (4, NOT CHARGING - CABLE DISCONNECTED)
         state = int(float(parse(await self.read_gatt_char(Characteristics.BATTERY_CHARGE_STATE))))
-        return state in (0, 1)
+        return state in (0, 1), state == 0
 
     async def preheat(self, cancel=False):
         if cancel:
@@ -49,7 +48,7 @@ class PuffcoBleakClient(BleakClient):
             -1 (DEVICE FULLY CHARGED ?)
             int (CHARGING; SECONDS UNTIL CHARGED)
         """
-        if not (await self.currently_charging):
+        if not (await self.is_currently_charging())[0]:
             return None
 
         full_eta = parse(await self.read_gatt_char(Characteristics.BATTERY_CHARGE_FULL_ETA))

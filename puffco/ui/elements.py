@@ -227,6 +227,9 @@ class Battery(QFrame):
         if self.icon.x() != 50:
             self.icon.move(50, self.icon.y())
 
+        if self.eta.isHidden():
+            self.eta.show()
+
         if eta:
             self.eta.setText(f'Charge ETA: ~ {eta}')
             self.eta.adjustSize()

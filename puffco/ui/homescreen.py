@@ -9,7 +9,7 @@ from puffco.btnet import OperatingState
 
 
 class HomeScreen(QFrame):
-    last_charging_state = None
+    last_charging_state = [None, None]
     current_operating_state = None
     current_profile_id = None
     count = 0
@@ -118,7 +118,7 @@ class HomeScreen(QFrame):
 
         try:
             percentage = await client.get_battery_percentage()
-            is_charging = await client.currently_charging
+            is_charging, _ = await client.is_currently_charging()
             eta = None
             if is_charging:
                 eta = await client.get_battery_charge_eta()
@@ -193,21 +193,24 @@ class HomeScreen(QFrame):
 
             operating_state = await client.get_operating_state()
             if operating_state not in (OperatingState.PREHEATING, OperatingState.HEATED):
-                is_charging = await client.currently_charging
-                if settings.value('Modes/Ready', False, bool) and (self.last_charging_state is True
-                                                                   and self.last_charging_state != is_charging):
+                is_charging, bulk_charge = await client.is_currently_charging()
+                if settings.value('Modes/Ready', False, bool) and (self.last_charging_state[0] is True
+                                                                   and self.last_charging_state[0] != is_charging):
                     await client.preheat()
 
                 # if we are charging, update the battery status every minute
-                if is_charging and self.count % 30 == 0:
+                if (is_charging and bulk_charge) and self.count % 30 == 0:
                     await self.update_battery()
 
-                self.last_charging_state = is_charging
+                last_bulk_charge = self.last_charging_state[1]
+                if last_bulk_charge is True and (last_bulk_charge != bulk_charge):
+                    self.ui_battery.eta.hide()
+
+                self.last_charging_state = is_charging, bulk_charge
 
             if self.current_operating_state != operating_state:
                 # Handle operating state changes:
                 if self.current_operating_state:
-                    # todo: handle changes
                     print(f'operating state changed {OperatingState(self.current_operating_state).name} --> {OperatingState(operating_state).name}')
                     if self.current_operating_state in (OperatingState.PREHEATING, OperatingState.HEATED):
                         # we just came out of a heat cycle
