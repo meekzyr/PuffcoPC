@@ -225,7 +225,7 @@ class PuffcoMain(QMainWindow):
             if 'lantern' in control.setting_name.lower():
                 # send the lantern status and continue. we do not want to activate the button,
                 # as that will cause the lantern UI to appear upon opening control center
-                await self._client.send_lantern_status(True)
+                await self._client.send_lantern_status(value)
                 continue
 
             if value:
