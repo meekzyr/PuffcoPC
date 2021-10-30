@@ -209,7 +209,7 @@ class ProfileWindow(QMainWindow):
         self.confirm_edit_button.move(self.edit_button.pos())
         self.confirm_edit_button.hide()
 
-        self.start_button = ImageButton(':/logo.png', self, callback=self.start)
+        self.start_button = ImageButton(':/misc/logo.png', self, callback=self.start)
         self.start_button.resize(64, 64)
         self.start_button.move(207, 180)
         self.cancel_button = ImageButton(':/icons/close.png', self, callback=lambda: self.done(cancel=True))

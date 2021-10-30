@@ -47,7 +47,7 @@ class PuffcoMain(QMainWindow):
                            f"color: rgb{theme.TEXT_COLOR};\n"
                            "border: 0px;")
 
-        self.puffcoIcon = ImageButton(':/logo.png', self, size=(64, 64))
+        self.puffcoIcon = ImageButton(':/misc/logo.png', self, size=(64, 64))
         self.puffcoIcon.move(210, 0)
 
         self.control_center = ControlCenter(self)
