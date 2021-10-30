@@ -116,19 +116,19 @@ class EditControls(QFrame):
 
         # official app Fahrenheit range (400 - 620)
         self.temperature_control = ProfileSlider(self, 'TEMPERATURE',
-                                                 ':/assets/icon_thermometer.png',
+                                                 ':/icons/thermometer.png',
                                                  _min=200, _max=620,
                                                  value=temperature)
         self.temperature_control.icon.move(9, self.temperature_control.icon.y())
 
         # official app Duration range (15s - 120s)
         self.duration_control = ProfileSlider(self, 'DURATION',
-                                              ':/assets/icon_clock.png',
+                                              ':/icons/clock.png',
                                               _min=15, _max=120, value=duration)
         self.duration_control.move(0, 70)
 
         self.color_control = ProfileSlider(self, 'COLOR',
-                                           ':/assets/icon_clock.png',
+                                           ':/icons/clock.png',
                                            color=True, current=color)
         self.color_control.move(0, 140)
 
@@ -194,25 +194,25 @@ class ProfileWindow(QMainWindow):
         self.p_name.textEdited.connect(self.uppercase_text)
         self.p_name.selectionChanged.connect(lambda: self.p_name.setSelection(0, 0))
 
-        self.edit_button = ImageButton(':/assets/iconmore.png', self, callback=self.edit_clicked)
+        self.edit_button = ImageButton(':/icons/more.png', self, callback=self.edit_clicked)
         self.edit_button.resize(48, 48)
         self.edit_button.move(self.width() - self.edit_button.width() - 10, 30)
 
-        self.cancel_edit_button = ImageButton(':/assets/iconclose.png', self, callback=self.done)
+        self.cancel_edit_button = ImageButton(':/icons/close.png', self, callback=self.done)
         self.cancel_edit_button.resize(48, 48)
         self.cancel_edit_button.move(10, self.edit_button.y())
         self.cancel_edit_button.hide()
 
-        self.confirm_edit_button = ImageButton(':/assets/iconcheck.png', self,
+        self.confirm_edit_button = ImageButton(':/icons/confirm.png', self,
                                                     callback=lambda: self.done(confirm=True))
         self.confirm_edit_button.resize(48, 48)
         self.confirm_edit_button.move(self.edit_button.pos())
         self.confirm_edit_button.hide()
 
-        self.start_button = ImageButton(':/icon/puffco-logo.png', self, callback=self.start)
+        self.start_button = ImageButton(':/logo.png', self, callback=self.start)
         self.start_button.resize(64, 64)
         self.start_button.move(207, 180)
-        self.cancel_button = ImageButton(':/assets/iconclose.png', self, callback=lambda: self.done(cancel=True))
+        self.cancel_button = ImageButton(':/icons/close.png', self, callback=lambda: self.done(cancel=True))
         self.cancel_button.resize(48, 48)
         self.cancel_button.move(210, 320)
         self.cancel_button.hide()
@@ -252,10 +252,10 @@ class ProfileWindow(QMainWindow):
         self.controls.move(self.controls.x() + 32, self.controls.y() - 60)
         self.controls.hide()
 
-        self.temp_boost = ImageButton(':/assets/icon_boost_temp.png', self, paint=False, size=(54, 54),
+        self.temp_boost = ImageButton(':/icons/boost_temp.png', self, paint=False, size=(54, 54),
                                       callback=self.send_boost)
         self.temp_boost.move(self.width() - 130, self.height() - 100)
-        self.time_boost = ImageButton(':/assets/icon_boost_time.png', self, paint=False, size=(54, 54),
+        self.time_boost = ImageButton(':/icons/boost_time.png', self, paint=False, size=(54, 54),
                                       callback=lambda: self.send_boost(boost_time=True))
         self.time_boost.move((self.width() / 4) - 50, self.height() - 100)
 

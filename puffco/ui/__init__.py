@@ -39,18 +39,18 @@ class PuffcoMain(QMainWindow):
         self.setMinimumSize(self.SIZE)
         self.setMaximumSize(self.SIZE)
         self.setMouseTracking(True)
-        self.setWindowIcon(QIcon(":/icon/favicon.ico"))
+        self.setWindowIcon(QIcon(":/puffco.ico"))
         self.setStyleSheet("background-image: url(:/assets/background.png);\n"
                            "color: rgb(255, 255, 255);\n"
                            "border: 0px;")
 
-        self.puffcoIcon = ImageButton(':/icon/puffco-logo.png', self, size=(64, 64))
+        self.puffcoIcon = ImageButton(':/logo.png', self, size=(64, 64))
         self.puffcoIcon.move(210, 0)
         from .control_center import ControlCenter
 
         #self.settings_window = Settings(self)
         self.control_center = ControlCenter(self)
-        self.settings = ImageButton(':/assets/icon_controlcenter.png', self,
+        self.settings = ImageButton(':/icons/control_center.png', self,
                                     callback=self.toggle_ctrl_center, size=(36, 36))
         self.settings.move(self.width() - 70, 10)
 

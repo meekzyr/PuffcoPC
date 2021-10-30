@@ -201,7 +201,7 @@ class DataLabel(QLabel):
 
 
 class Battery(QFrame):
-    _asset: str = ':/assets/assets/icon-battery-unknown.png'
+    _asset: str = ':/battery/unknown.png'
 
     def __init__(self, parent):
         super(Battery, self).__init__(parent)
@@ -242,28 +242,27 @@ class Battery(QFrame):
             self.percent.update()
             self.current_percentage = percent
 
-        asset_name = 'icon-battery-'
+        if percent <= 10:
+            asset_name = '10'
+        elif 40 > percent >= 15:
+            asset_name = '25'
+        elif 65 > percent >= 40:
+            asset_name = '50'
+        elif 90 > percent >= 65:
+            asset_name = '75'
+        else:
+            asset_name = 'full'
+
         if charging != self.last_charge_state:
             if charging:
-                asset_name += 'charging-'
+                asset_name = 'charging_' + asset_name
 
             self.last_charge_state = charging
 
-        if percent <= 10:
-            asset_name += '10'
-        elif 40 > percent >= 15:
-            asset_name += '25'
-        elif 65 > percent >= 40:
-            asset_name += '50'
-        elif 90 > percent >= 65:
-            asset_name += '75'
-        else:
-            asset_name += 'full'
+        if asset_name.endswith('_'):
+            asset_name = 'unknown'
 
-        if asset_name.endswith('-'):
-            asset_name += 'unknown'
-
-        asset = f':/assets/assets/{asset_name}.png'
+        asset = f':/battery/{asset_name}.png'
         if self._asset != asset:
             pixmap = QPixmap(asset)
             self.icon.setPixmap(pixmap.scaled(41, 21))

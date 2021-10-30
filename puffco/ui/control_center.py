@@ -11,7 +11,7 @@ button_font.setStretch(QFont.Unstretched * 1.5)
 
 class ControlButton(ImageButton):
     ENABLED = False
-    PATH = ':/assets/controlcenter_button.png'
+    PATH = ':/assets/control_center_btn.png'
 
     def __init__(self, parent, btn_text, asset_fp, size, setting, **kwargs):
         self._callback = kwargs.get('callback', None)
@@ -59,22 +59,22 @@ class ControlCenter(QFrame):
         self.title.setStyleSheet('background: transparent;')
         self.title.move((parent.width() / 2) - (self.title.width() / 2), 20)
 
-        self.boost_controls = ImageButton(':/assets/icon_rocket.png', self, paint=False, size=(54, 54))
+        self.boost_controls = ImageButton(':/icons/boost_mode.png', self, paint=False, size=(54, 54))
         self.boost_controls.move((parent.width() / 2), 150)
 
-        self.power_button = ImageButton(':/assets/icon_light_powermode.png', self, paint=False, size=(54, 54))
+        self.power_button = ImageButton(':/icons/power_mode.png', self, paint=False, size=(54, 54))
         self.power_button.move((parent.width()/2) + 70, 150)
 
-        self.lantern_mode = ControlButton(self, 'LANTERN\nMODE', ':/assets/icon_lanternmode.png', (26, 42),
+        self.lantern_mode = ControlButton(self, 'LANTERN\nMODE', ':/icons/lantern_mode.png', (26, 42),
                                           'Modes/Lantern', paint=False)
         self.lantern_mode.move(self.boost_controls.x() - 57, self.power_button.y() + 45)
         self.lantern_mode.btn_icon.move(65, 45)
 
-        self.ready_mode = ControlButton(self, 'READY\nMODE', ':/assets/icon_readymode.png', (26, 36),
+        self.ready_mode = ControlButton(self, 'READY\nMODE', ':/icons/ready_mode.png', (26, 36),
                                         'Modes/Ready', paint=False)  # callback not needed here
         self.ready_mode.move(self.boost_controls.x() - 57, self.lantern_mode.y() + 100)
 
-        self.stealth_mode = ControlButton(self, 'STEALTH\nMODE', ':/assets/icon_stealthmode.png', (42, 30),
+        self.stealth_mode = ControlButton(self, 'STEALTH\nMODE', ':/icons/stealth_mode.png', (42, 30),
                                           'Modes/Stealth', paint=False, callback=self.toggle_stealth)
         self.stealth_mode.move(self.boost_controls.x() - 57, self.ready_mode.y() + 100)
         self.stealth_mode.btn_icon.move(55, 50)
