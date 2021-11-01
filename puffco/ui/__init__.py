@@ -433,5 +433,6 @@ class PuffcoMain(QMainWindow):
         self.profiles_button.setDisabled(False)
 
     def closeEvent(self, event):
+        logger.close_log()
         loop.stop()
         event.accept()
