@@ -14,15 +14,15 @@ from .homescreen import HomeScreen
 from .profiles import HeatProfiles, Profile
 from .control_center import ControlCenter
 
+UPDATE_COUNT = 0
+CURRENT_TAB = 'home'
+LAST_CHARGING_STATE = [None, None]
+LAST_OPERATING_STATE = None
+LAST_PROFILE_ID = None
+
 
 class PuffcoMain(QMainWindow):
-    count = 0
-    current_profile_id = None
-    current_operating_state = None
-    last_charging_state = [None, None]
-    RETRIES = 0
     PROFILES = []
-    current_tab = 'home'
     SIZE = QSize(480, 720)
 
     def __init__(self, client):
@@ -93,7 +93,8 @@ class PuffcoMain(QMainWindow):
         if not self._client.is_connected:
             return
 
-        self.count += 1
+        global UPDATE_COUNT
+        UPDATE_COUNT += 1
 
         try:
             lantern_settings = self.control_center.lantern_settings
@@ -113,26 +114,28 @@ class PuffcoMain(QMainWindow):
 
             operating_state = await self._client.get_operating_state()
             if operating_state not in (OperatingState.PREHEATING, OperatingState.HEATED):
+                global LAST_CHARGING_STATE
                 is_charging, bulk_charge = await self._client.is_currently_charging()
-                if settings.value('Modes/Ready', False, bool) and (self.last_charging_state[0] is True
-                                                                   and self.last_charging_state[0] != is_charging):
+                if settings.value('Modes/Ready', False, bool) and (LAST_CHARGING_STATE[0] is True
+                                                                   and LAST_CHARGING_STATE[0] != is_charging):
                     await self._client.preheat()
 
                 # if we are charging, update the battery status every minute
-                if (is_charging and bulk_charge) and self.count % 30 == 0:
+                if (is_charging and bulk_charge) and UPDATE_COUNT % 30 == 0:
                     await self.update_battery()
 
-                last_bulk_charge = self.last_charging_state[1]
+                last_bulk_charge = LAST_CHARGING_STATE[1]
                 if last_bulk_charge is True and (last_bulk_charge != bulk_charge):
                     self.home.ui_battery.eta.hide()
 
-                self.last_charging_state = is_charging, bulk_charge
+                LAST_CHARGING_STATE = is_charging, bulk_charge
 
-            if self.current_operating_state != operating_state:
+            global LAST_OPERATING_STATE
+            if LAST_OPERATING_STATE != operating_state:
                 # Handle operating state changes:
-                if self.current_operating_state:
-                    print(f'operating state changed {OperatingState(self.current_operating_state).name} --> {OperatingState(operating_state).name}')
-                    if self.current_operating_state in (OperatingState.PREHEATING, OperatingState.HEATED):
+                if LAST_OPERATING_STATE:
+                    print(f'OpState changed {OperatingState(LAST_OPERATING_STATE).name} --> {OperatingState(operating_state).name}')
+                    if LAST_OPERATING_STATE in (OperatingState.PREHEATING, OperatingState.HEATED):
                         # we just came out of a heat cycle
                         await self.update_battery()
 
@@ -155,20 +158,21 @@ class PuffcoMain(QMainWindow):
                             if active_prof_window and active_prof_window.started:
                                 active_prof_window.cycle_finished()
 
-                self.current_operating_state = operating_state
+                LAST_OPERATING_STATE = operating_state
 
             # Current operating state handling:
             if operating_state == OperatingState.ON_TEMP_SELECT:
+                global LAST_PROFILE_ID
                 current_profile_id = await self._client.get_profile()
-                if self.current_profile_id != current_profile_id:
+                if LAST_PROFILE_ID != current_profile_id:
                     await self._client.change_profile(current_profile_id)
-                    if self.current_profile_id:
+                    if LAST_PROFILE_ID:
                         profile_name = await self._client.get_profile_name()
                         if profile_name and self.home.ui_activeProfile.data != profile_name:
                             self.home.ui_activeProfile.update_data(profile_name)
                             self.home.device.colorize(*await self._client.profile_color_as_rgb())
 
-                    self.current_profile_id = current_profile_id
+                    LAST_PROFILE_ID = current_profile_id
 
             elif operating_state in (OperatingState.PREHEATING, OperatingState.HEATED):
                 self.temp_timer.setInterval(1000)
@@ -214,7 +218,7 @@ class PuffcoMain(QMainWindow):
 
                     active_prof_window.verified = True
 
-                if self.current_operating_state in (OperatingState.PREHEATING, OperatingState.HEATED) and \
+                if LAST_OPERATING_STATE in (OperatingState.PREHEATING, OperatingState.HEATED) and \
                         not active_prof_window.started:
                     # adjust the UI if we have not already done so
                     active_prof_window.start(send_command=False)
@@ -248,11 +252,12 @@ class PuffcoMain(QMainWindow):
             pass
 
     def show_tab(self, frame):
+        global CURRENT_TAB
         is_home = frame == self.home
-        if (is_home and self.current_tab == 'home') or (self.current_tab == 'profiles' and not is_home):
+        if (is_home and CURRENT_TAB == 'home') or (CURRENT_TAB == 'profiles' and not is_home):
             return
 
-        self.current_tab = 'home' if is_home else 'profiles'
+        CURRENT_TAB = 'home' if is_home else 'profiles'
         other = self.profiles if is_home else self.home
 
         self.homeButton.setDown(is_home)
@@ -272,7 +277,7 @@ class PuffcoMain(QMainWindow):
         other.setVisible(False)
 
     async def connect(self, *, retry=False):
-        if self.RETRIES >= 100:
+        if self._client.RETRIES >= 100:
             raise ConnectionRefusedError('Could not connect to any devices.')
 
         if self._client.address == '':
@@ -315,7 +320,7 @@ class PuffcoMain(QMainWindow):
             await self._client.pair()
         else:
             if retry:
-                self.RETRIES += 1
+                self._client.RETRIES += 1
 
             if not timeout:
                 print('Failed to connect, retrying..')
@@ -323,7 +328,7 @@ class PuffcoMain(QMainWindow):
             await sleep(2.5)  # reconnectDelayMs: 2500
             return await self.connect(retry=True)
 
-        self.RETRIES = 0
+        self._client.RETRIES = 0
         print('Connected!')
         return connected
 

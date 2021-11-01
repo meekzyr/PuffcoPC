@@ -11,6 +11,8 @@ PROFILE_TO_BYT_ARRAY = {0: bytearray([0, 0, 0, 0]),
 
 
 class PuffcoBleakClient(BleakClient):
+    RETRIES = 0
+
     attempted_devices = []
     name = ''  # name of the connected device
 
