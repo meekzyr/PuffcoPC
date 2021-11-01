@@ -1,10 +1,10 @@
-from asyncio import ensure_future
 from PyQt5.QtWidgets import QMainWindow, QLabel, QFrame, QSlider, QLineEdit
 from PyQt5.QtCore import QSize, Qt, QTimer
 from PyQt5.QtGui import QFont, QMouseEvent, QPixmap
 from PIL import Image
 
 from .elements import ImageButton
+from . import ensure_future
 
 
 class ColorSlider(QLabel):

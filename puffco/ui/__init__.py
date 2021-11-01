@@ -1,35 +1,25 @@
 import builtins
 
 from asyncio import futures, ensure_future, sleep
-from PyQt5.QtCore import QSize, QMetaObject
+from PyQt5.QtCore import QSize, QMetaObject, QTimer
 from PyQt5.QtGui import QIcon, QPixmap, QColor
 from PyQt5.QtWidgets import QPushButton, QMainWindow, QLabel
 
 from bleak import BleakError, BleakScanner
 
-from puffco.btnet import Characteristics
+from puffco.btnet import Characteristics, OperatingState
 from .themes import DEVICE_THEME_MAP
 from .elements import ImageButton
 from .homescreen import HomeScreen
-from .profiles import HeatProfiles
+from .profiles import HeatProfiles, Profile
 from .control_center import ControlCenter
 
 
-class Profile:
-    def __init__(self, idx, name, temperature, time, color, color_bytes):
-        self.idx = idx
-        self.name = name
-        self.temperature = temperature
-        self.temperature_f = round(9.0/5.0 * temperature + 32)
-        self.duration = time
-        self.color = color
-        self.color_bytes = color_bytes
-
-    def __str__(self):
-        return str(self.__dict__)
-
-
 class PuffcoMain(QMainWindow):
+    count = 0
+    current_profile_id = None
+    current_operating_state = None
+    last_charging_state = [None, None]
     RETRIES = 0
     PROFILES = []
     current_tab = 'home'
@@ -46,6 +36,13 @@ class PuffcoMain(QMainWindow):
         self.setStyleSheet(f"background-image: url({theme.BACKGROUND});\n"
                            f"color: rgb{theme.TEXT_COLOR};\n"
                            "border: 0px;")
+
+        self.timer = QTimer(self)
+        self.timer.setInterval(1000 * 2)  # 2s
+        self.timer.timeout.connect(lambda: ensure_future(self.update_loop()).done())
+        self.temp_timer = QTimer(self)
+        self.temp_timer.setInterval(1000)  # 1s
+        self.temp_timer.timeout.connect(lambda: ensure_future(self.update_temp()).done())
 
         self.puffcoIcon = ImageButton(':/misc/logo.png', self, size=(64, 64),
                                       callback=lambda: self.dob.setVisible(not self.dob.isVisible()))
@@ -91,9 +88,164 @@ class PuffcoMain(QMainWindow):
 
         QMetaObject.connectSlotsByName(self)
 
-    def closeEvent(self, event):
-        loop.stop()
-        event.accept()
+    async def update_loop(self):
+        """ Update the elements on this frame (if shown) """
+        if not self._client.is_connected:
+            return
+
+        self.count += 1
+
+        try:
+            lantern_settings = self.control_center.lantern_settings
+            if lantern_settings.isHidden() is False and lantern_settings.wheel.selected:
+                if lantern_settings.last_selection != lantern_settings.wheel.selected:
+                    await self._client.send_lantern_color(lantern_settings.wheel.selected)
+
+                lantern_settings.last_selection = lantern_settings.wheel.selected
+
+            led = self.home.device.led
+            if settings.value('Modes/Stealth', False, bool):
+                if not led.isHidden():
+                    led.hide()
+            else:
+                if led.isHidden():
+                    led.show()
+
+            operating_state = await self._client.get_operating_state()
+            if operating_state not in (OperatingState.PREHEATING, OperatingState.HEATED):
+                is_charging, bulk_charge = await self._client.is_currently_charging()
+                if settings.value('Modes/Ready', False, bool) and (self.last_charging_state[0] is True
+                                                                   and self.last_charging_state[0] != is_charging):
+                    await self._client.preheat()
+
+                # if we are charging, update the battery status every minute
+                if (is_charging and bulk_charge) and self.count % 30 == 0:
+                    await self.update_battery()
+
+                last_bulk_charge = self.last_charging_state[1]
+                if last_bulk_charge is True and (last_bulk_charge != bulk_charge):
+                    self.home.ui_battery.eta.hide()
+
+                self.last_charging_state = is_charging, bulk_charge
+
+            if self.current_operating_state != operating_state:
+                # Handle operating state changes:
+                if self.current_operating_state:
+                    print(f'operating state changed {OperatingState(self.current_operating_state).name} --> {OperatingState(operating_state).name}')
+                    if self.current_operating_state in (OperatingState.PREHEATING, OperatingState.HEATED):
+                        # we just came out of a heat cycle
+                        await self.update_battery()
+
+                        # slow our temp reader, and make sure it is started/active
+                        # it will automatically stop once it hits 100*F
+                        self.temp_timer.setInterval(1000 * 3)
+                        if not self.temp_timer.isActive():
+                            self.temp_timer.start()
+
+                        # lets update the dab count
+                        if not settings.value('Home/HideDabCounts', False, bool):
+                            total = await self._client.get_total_dab_count()
+                            if self.home.ui_totalDabCnt.data != total:  # check if our dab count has changed
+                                self.home.ui_totalDabCnt.update_data(total)
+                                # we can update the daily avg as well
+                                self.home.ui_dailyDabCnt.update_data(await self._client.get_daily_dab_count())
+
+                        if operating_state not in (OperatingState.PREHEATING, OperatingState.HEATED):
+                            active_prof_window = self.profiles.active_profile
+                            if active_prof_window and active_prof_window.started:
+                                active_prof_window.cycle_finished()
+
+                self.current_operating_state = operating_state
+
+            # Current operating state handling:
+            if operating_state == OperatingState.ON_TEMP_SELECT:
+                current_profile_id = await self._client.get_profile()
+                if self.current_profile_id != current_profile_id:
+                    await self._client.change_profile(current_profile_id)
+                    if self.current_profile_id:
+                        profile_name = await self._client.get_profile_name()
+                        if profile_name and self.home.ui_activeProfile.data != profile_name:
+                            self.home.ui_activeProfile.update_data(profile_name)
+                            self.home.device.colorize(*await self._client.profile_color_as_rgb())
+
+                    self.current_profile_id = current_profile_id
+
+            elif operating_state in (OperatingState.PREHEATING, OperatingState.HEATED):
+                self.temp_timer.setInterval(1000)
+                if not self.temp_timer.isActive():
+                    self.temp_timer.start()
+
+            elif operating_state == OperatingState.COOLDOWN:
+                # we are fresh out of a heat cycle, lets update the battery display and slow our temperature updates
+                self.temp_timer.setInterval(1000 * 3)
+                await self.update_battery()
+
+        except BleakError:
+            # device is not connected, or our characteristics have not been populated
+            pass
+
+    async def update_temp(self):
+        if not self._client.is_connected:
+            return
+
+        try:
+            temp = await self._client.get_bowl_temperature()
+            num = ''.join(filter(str.isdigit, temp))
+            if not num:
+                # atomizer is disconnected, check for changes every 20s
+                self.temp_timer.setInterval(1000 * 20)
+            elif int(num) <= 100:
+                #  we are at/below 100 Fahrenheit.. stop our ival
+                self.temp_timer.stop()
+
+            active_prof_window = self.profiles.active_profile
+            if not active_prof_window:
+                profile_id = await self._client.get_profile()
+                self.profiles.select_profile(profile_id)
+                active_prof_window = self.profiles.active_profile
+                active_prof_window.verified = True
+
+            if active_prof_window:
+                if not active_prof_window.verified:
+                    profile_id = await self._client.get_profile()
+                    if profile_id != active_prof_window.idx:
+                        self.profiles.select_profile(profile_id)
+                        active_prof_window = self.profiles.active_profile
+
+                    active_prof_window.verified = True
+
+                if self.current_operating_state in (OperatingState.PREHEATING, OperatingState.HEATED) and \
+                        not active_prof_window.started:
+                    # adjust the UI if we have not already done so
+                    active_prof_window.start(send_command=False)
+
+                active_prof_window.update_temp_reading(temp)
+
+            if temp and self.home.ui_bowlTemp.data != temp:
+                self.home.ui_bowlTemp.update_data(temp)
+
+        except BleakError:
+            pass
+
+    async def update_battery(self):
+        if not self._client.is_connected:
+            return
+
+        try:
+            percentage = await self._client.get_battery_percentage()
+            is_charging, _ = await self._client.is_currently_charging()
+            eta = None
+            if is_charging:
+                eta = await self._client.get_battery_charge_eta()
+                hr, rem = divmod(eta, 3600)
+                mins, sec = divmod(rem, 60)
+                eta = f'{str(int(mins)).zfill(2)}:{str(int(sec)).zfill(2)}'
+                if hr > 0:
+                    eta = str(int(hr)).zfill(2) + f':{eta}'
+
+            self.home.ui_battery.update_battery(percentage, is_charging, eta)
+        except BleakError:
+            pass
 
     def show_tab(self, frame):
         is_home = frame == self.home
@@ -180,10 +332,14 @@ class PuffcoMain(QMainWindow):
         if not self.isVisible():
             self.show()
 
+        if self.timer.isActive():
+            self.timer.stop()
+
         print(f'Lost connection to "{client.name}" ({client.address}), attempting to reconnect...')
         await self.connect(retry=True)
 
     async def _on_connect(self):
+        self.timer.start()
         self._client.set_disconnected_callback(lambda *args: ensure_future(self.on_disconnect(*args)))
         # Set the app theme (upon first launch):
         self.ctrl_center_btn.setDisabled(False)
@@ -268,3 +424,7 @@ class PuffcoMain(QMainWindow):
             self.show()
 
         self.profilesButton.setDisabled(False)
+
+    def closeEvent(self, event):
+        loop.stop()
+        event.accept()

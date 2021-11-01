@@ -1,9 +1,23 @@
-from asyncio import ensure_future
 from PyQt5.QtWidgets import QFrame, QLabel
 from PyQt5.QtGui import QPixmap, QFont
 
+from . import ensure_future
 from .elements import ProfileButton
 from .profile_window import ProfileWindow
+
+
+class Profile:
+    def __init__(self, idx, name, temperature, time, color, color_bytes):
+        self.idx = idx
+        self.name = name
+        self.temperature = temperature
+        self.temperature_f = round(9.0/5.0 * temperature + 32)
+        self.duration = time
+        self.color = color
+        self.color_bytes = color_bytes
+
+    def __str__(self):
+        return str(self.__dict__)
 
 
 class HeatProfiles(QFrame):
@@ -31,8 +45,8 @@ class HeatProfiles(QFrame):
 
         geom = [30, 70, self.parent().width() - 65, 110]  # x, y, w, h
         for i in range(0, 4):
-            self.profile_buttons[i] = ProfileButton(self, i, QPixmap(theme.HOME_DATA), geom,
-                                                    callback=self.select_profile)
+            self.profile_buttons[i] = ProfileButton(self, i, QPixmap(theme.HOME_DATA),
+                                                    geom, callback=self.select_profile)
             geom[1] += geom[3] + 20  # offset 20px
 
     def select_profile(self, profile_num):

@@ -1,8 +1,8 @@
-from asyncio import ensure_future
-
 from PyQt5.QtWidgets import QFrame, QLabel, QSlider
 from PyQt5.QtGui import QFont, QColor, QIcon, QPixmap, QCursor
 from PyQt5.QtCore import Qt, QEvent
+
+from . import ensure_future
 from .elements import ImageButton
 from .profile_window import ColorSlider
 
@@ -79,6 +79,8 @@ class ColorWheel(ColorSlider):
 
 
 class LanternSettings(QFrame):
+    last_selection = None
+
     def __init__(self, parent):
         super(LanternSettings, self).__init__(parent)
         self.setHidden(True)
