@@ -71,7 +71,6 @@ class ColorWheel(ColorSlider):
         self.selecting = False
 
     def enterEvent(self, a0: QEvent) -> None:
-        self.selected = None
         self.setCursor(QCursor(self.cursor_pixmap))
 
     def leaveEvent(self, a0: QEvent) -> None:
@@ -95,8 +94,8 @@ class LanternSettings(QFrame):
         self.preview.setStyleSheet(f'border: 2px solid black;'
                                    f'background-color: rgb{255, 255, 255};')
 
-        self.cancel_button = ImageButton(':/icons/cancel.png', self,
-                                         callback=lambda: parent.lantern_mode.on_click())
+        self.cancel_button = ImageButton(':/icons/cancel.png', self, callback=lambda _:
+                                         parent.edit_lantern_settings(bool(self.wheel.selected), done=True))
         self.cancel_button.resize(48, 48)
         self.cancel_button.move(10, 6)
 
@@ -185,9 +184,9 @@ class ControlCenter(QFrame):
 
         self.CONTROLS = [self.lantern_mode, self.ready_mode, self.stealth_mode]
 
-    def edit_lantern_settings(self, enabled):
+    def edit_lantern_settings(self, enabled, done=False):
         ensure_future(client.send_lantern_status(enabled)).done()
-        if enabled:
+        if enabled and not done:
             self.lantern_settings.show()
             self.lantern_settings.raise_()
         else:
