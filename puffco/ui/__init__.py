@@ -47,17 +47,25 @@ class PuffcoMain(QMainWindow):
                            f"color: rgb{theme.TEXT_COLOR};\n"
                            "border: 0px;")
 
-        self.puffcoIcon = ImageButton(':/misc/logo.png', self, size=(64, 64))
+        self.puffcoIcon = ImageButton(':/misc/logo.png', self, size=(64, 64),
+                                      callback=lambda: self.dob.setVisible(not self.dob.isVisible()))
         self.puffcoIcon.move(210, 0)
 
         self.control_center = ControlCenter(self)
         self.ctrl_center_btn = ImageButton(':/icons/control_center.png', self,
-                                           callback=self.toggle_ctrl_center, size=(36, 36),
-                                           color=QColor(*theme.TEXT_COLOR))
+                                           callback=lambda: self.control_center.setHidden(not self.control_center.isHidden()),
+                                           size=(36, 36), color=QColor(*theme.TEXT_COLOR))
         self.ctrl_center_btn.move(self.width() - 70, 10)
         self.ctrl_center_btn.setDisabled(True)
 
         self.home = HomeScreen(self)
+
+        self.dob = QLabel('', self.home)
+        self.dob.setMinimumSize(100, 30)
+        self.dob.setScaledContents(True)
+        self.dob.setStyleSheet('background: transparent;')
+        self.dob.move(self.home.ui_battery.x(), self.home.ui_battery.y() + 30)
+        self.dob.setHidden(True)
 
         self.homeButton = QPushButton('MY PEAK', self)
         self.homeButton.setGeometry(0, self.height() - 70, self.width() / 2, 70)
@@ -82,12 +90,6 @@ class PuffcoMain(QMainWindow):
         self.show()
 
         QMetaObject.connectSlotsByName(self)
-
-    def toggle_ctrl_center(self):
-        if self.control_center.isHidden():
-            self.control_center.show()
-        else:
-            self.control_center.hide()
 
     def closeEvent(self, event):
         loop.stop()
@@ -185,6 +187,7 @@ class PuffcoMain(QMainWindow):
         self._client.set_disconnected_callback(lambda *args: ensure_future(self.on_disconnect(*args)))
         # Set the app theme (upon first launch):
         self.ctrl_center_btn.setDisabled(False)
+        self.dob.setText(f'DOB: {await self._client.get_device_birthday()}')
 
         if settings.value('General/Theme', 'unset', str) == 'unset':
             model = await self._client.get_device_model()
