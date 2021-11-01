@@ -218,6 +218,10 @@ class PuffcoMain(QMainWindow):
                     button._pixmap = QPixmap(theme.HOME_DATA)
                     button.update()
 
+        self.control_center.lantern_brightness.blockSignals(True)
+        self.control_center.lantern_brightness.setValue(await self._client.get_lantern_brightness())
+        self.control_center.lantern_brightness.blockSignals(False)
+
         # Activate control center buttons:
         for control in self.control_center.CONTROLS:
             value = settings.value(control.setting_name, False, bool)

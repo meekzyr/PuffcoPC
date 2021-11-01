@@ -1,6 +1,6 @@
 from asyncio import ensure_future
 
-from PyQt5.QtWidgets import QFrame, QLabel
+from PyQt5.QtWidgets import QFrame, QLabel, QSlider
 from PyQt5.QtGui import QFont, QColor, QIcon, QPixmap, QCursor
 from PyQt5.QtCore import Qt, QEvent
 from .elements import ImageButton
@@ -9,6 +9,33 @@ from .profile_window import ColorSlider
 button_font = QFont()
 button_font.setPointSize(12)
 button_font.setStretch(QFont.Unstretched * 1.5)
+
+WIDE_SLIDER_STYLE = """
+.QSlider {
+    min-width: 100px;
+    max-width: 100px;
+    background: transparent;
+}
+
+.QSlider::groove:vertical {
+    border: 1px solid #262626;
+    width: 150px;
+    background: #393939;
+}
+
+.QSlider::handle:vertical {
+    background: #ffffff;
+    height: 10px;
+    margin-left: -20px;
+    margin-right: -20px;
+    border-radius: 30px;
+}
+
+.QSlider::add-page:vertical {
+    background: #ffffff;
+    border-color: #bbb;
+}
+"""
 
 
 class ColorWheel(ColorSlider):
@@ -127,7 +154,7 @@ class ControlCenter(QFrame):
         self.boost_controls.move((parent.width() / 2), 150)
 
         self.power_button = ImageButton(':/icons/power_mode.png', self, paint=False, size=(54, 54))
-        self.power_button.move((parent.width()/2) + 70, 150)
+        self.power_button.move((parent.width() / 2) + 70, 150)
 
         self.lantern_mode = ControlButton(self, 'LANTERN\nMODE', ':/icons/lantern_mode.png', (26, 42),
                                           'Modes/Lantern', paint=False, callback=self.edit_lantern_settings)
@@ -143,7 +170,16 @@ class ControlCenter(QFrame):
         self.stealth_mode.move(self.boost_controls.x() - 57, self.ready_mode.y() + 100)
         self.stealth_mode.btn_icon.move(55, 50)
 
-        # TODO: lantern brightness
+        self.lantern_brightness = QSlider(Qt.Vertical, self)
+        self.lantern_brightness.setStyleSheet(WIDE_SLIDER_STYLE)
+        self.lantern_brightness.setRange(0, 255)
+        self.lantern_brightness.setValue(0)
+        self.lantern_brightness.setTickInterval(1)
+        self.lantern_brightness.setPageStep(5)
+        self.lantern_brightness.setSingleStep(1)
+        self.lantern_brightness.setFixedHeight((parent.height() / 2) - 15)
+        self.lantern_brightness.move(75, (parent.height() / 4) - 25)
+        self.lantern_brightness.valueChanged.connect(self.update_lantern_brightness)
 
         self.CONTROLS = [self.lantern_mode, self.ready_mode, self.stealth_mode]
 
@@ -159,3 +195,7 @@ class ControlCenter(QFrame):
     @staticmethod
     def toggle_stealth(enabled):
         ensure_future(client.set_stealth_mode(enabled)).done()
+
+    @staticmethod
+    def update_lantern_brightness(val):
+        ensure_future(client.send_lantern_brightness(val)).done()

@@ -22,6 +22,8 @@ class Constants:
                           'medium': '#6ee916',
                           'high': '#f80b00',
                           'peak': '#ffffff'}
+    BRIGHTNESS_MIN = 0
+    BRIGHTNESS_MAX = 255
 
 
 class ChamberType(IntEnum):
@@ -92,6 +94,7 @@ class Characteristics:
 
     LANTERN_STATUS = "F9A98C15-C651-4F34-B656-D100BF58004A"
     LANTERN_COLOR = "F9A98C15-C651-4F34-B656-D100BF580048"
+    LANTERN_BRIGHTNESS = "F9A98C15-C651-4F34-B656-D100BF58004B"
     DABS_PER_DAY = "F9A98C15-C651-4F34-B656-D100BF58003B"
     TOTAL_DAB_COUNT = "F9A98C15-C651-4F34-B656-D100BF58002F"
     STEALTH_STATUS = "F9A98C15-C651-4F34-B656-D100BF580042"
@@ -114,17 +117,10 @@ class Characteristics:
     TIME_OVERRIDE = "F9A98C15-C651-4F34-B656-D100BF580046"
 
 
-def parse(data):
-    _struct = struct.unpack('f', data)
+def parse(data, fmt='f'):
+    _struct = struct.unpack(fmt, data)
     remove = ['(', ',', ')']
     for chars in remove:
         _struct = str(_struct).replace(chars, "")
     return _struct
 
-
-def parseInt(data):
-    _struct = struct.unpack('<I', data)
-    remove = ['(', ',', ')']
-    for chars in remove:
-        _struct = str(_struct).replace(chars, "")
-    return _struct

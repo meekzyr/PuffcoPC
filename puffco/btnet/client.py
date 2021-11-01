@@ -1,5 +1,5 @@
 from bleak import BleakClient
-from . import Characteristics, Constants, PeakProModels, parse, parseInt
+from . import Characteristics, Constants, PeakProModels, parse
 
 from datetime import datetime
 import struct
@@ -148,7 +148,7 @@ class PuffcoBleakClient(BleakClient):
 
     async def get_device_birthday(self):
         birthday = await self.read_gatt_char(Characteristics.DEVICE_BIRTHDAY)
-        datetime_time = datetime.fromtimestamp(int(parseInt(birthday)))
+        datetime_time = datetime.fromtimestamp(int(parse(birthday, fmt='<I')))
         return str(datetime_time).split(" ")[0]
 
     async def set_stealth_mode(self, enable: bool):
@@ -193,3 +193,14 @@ class PuffcoBleakClient(BleakClient):
     async def send_lantern_color(self, color):
         await self.write_gatt_char(Characteristics.LANTERN_COLOR,
                                    bytearray([int(color[0]), int(color[1]), int(color[2]), 0, 1, 0, 0, 0]))
+
+    async def send_lantern_brightness(self, val):
+        # clamp the value to the limitations of the device/firmware
+        val = min(Constants.BRIGHTNESS_MAX, max(Constants.BRIGHTNESS_MIN, val))
+        # breakdown of the brightness array: [BASE_LED, UNDER_GLASS_LED, MAIN_LED, BATT_LOGO_LED]
+        await self.write_gatt_char(Characteristics.LANTERN_BRIGHTNESS, bytearray([val] * 4))
+
+    async def get_lantern_brightness(self):
+        brightness_data = await self.read_gatt_char(Characteristics.LANTERN_BRIGHTNESS)
+        # return the highest value, since the LEDs will always have the same brightness
+        return max(brightness_data)
