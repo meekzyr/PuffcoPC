@@ -123,4 +123,3 @@ def parse(data, fmt='f'):
     for chars in remove:
         _struct = str(_struct).replace(chars, "")
     return _struct
-

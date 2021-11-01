@@ -1,10 +1,10 @@
-from PyQt5.QtWidgets import QMainWindow, QLabel, QFrame, QSlider, QLineEdit
+from PIL import Image
 from PyQt5.QtCore import QSize, Qt, QTimer
 from PyQt5.QtGui import QFont, QMouseEvent, QPixmap
-from PIL import Image
+from PyQt5.QtWidgets import QMainWindow, QLabel, QFrame, QSlider, QLineEdit
 
-from .elements import ImageButton
 from . import ensure_future
+from .elements import ImageButton
 
 
 class ColorSlider(QLabel):
@@ -58,7 +58,12 @@ class ColorSlider(QLabel):
 
 
 class ProfileSlider(QFrame):
-    def __init__(self, parent, title: str, asset: str, _min: int = 0, _max: int = 0, value: int = 0, color=False, current='white'):
+    def __init__(self, parent, title: str, asset: str, _range: tuple = None, value: int = 0, color=False, current=None):
+        if _range is None:
+            _range = (0, 0)
+        if current is None:
+            current = 'white'
+
         self._title = title
         self._window = parent.parent()
         super(ProfileSlider, self).__init__(parent)
@@ -72,8 +77,8 @@ class ProfileSlider(QFrame):
 
         if not color:
             self.slider = QSlider(Qt.Horizontal, self)
-            self.slider.setRange(_min, _max)
-            self.slider.setValue(value or _min)
+            self.slider.setRange(*_range)
+            self.slider.setValue(value or _range[0])
             self.slider.setTickInterval(1)
             self.slider.setSingleStep(1)
             self.slider.setFixedWidth(306)
@@ -121,21 +126,15 @@ class EditControls(QFrame):
         self.move(30, 320)
 
         # official app Fahrenheit range (400 - 620)
-        self.temperature_control = ProfileSlider(self, 'TEMPERATURE',
-                                                 ':/icons/thermometer.png',
-                                                 _min=200, _max=620,
-                                                 value=temperature)
+        self.temperature_control = ProfileSlider(self, 'TEMPERATURE', ':/icons/thermometer.png',
+                                                 _range=(200, 620), value=temperature)
         self.temperature_control.icon.move(9, self.temperature_control.icon.y())
 
         # official app Duration range (15s - 120s)
-        self.duration_control = ProfileSlider(self, 'DURATION',
-                                              ':/icons/clock.png',
-                                              _min=15, _max=120, value=duration)
+        self.duration_control = ProfileSlider(self, 'DURATION', ':/icons/clock.png', _range=(15, 120), value=duration)
         self.duration_control.move(0, 70)
 
-        self.color_control = ProfileSlider(self, 'COLOR',
-                                           ':/icons/clock.png',
-                                           color=True, current=color)
+        self.color_control = ProfileSlider(self, 'COLOR', ':/icons/clock.png', color=True, current=color)
         self.color_control.move(0, 140)
 
     async def write_to_device(self, old_name, old_temp, old_dur, old_color):
@@ -209,8 +208,7 @@ class ProfileWindow(QMainWindow):
         self.cancel_edit_button.move(10, self.edit_button.y())
         self.cancel_edit_button.hide()
 
-        self.confirm_edit_button = ImageButton(':/icons/confirm.png', self,
-                                                    callback=lambda: self.done(confirm=True))
+        self.confirm_edit_button = ImageButton(':/icons/confirm.png', self, callback=lambda: self.done(confirm=True))
         self.confirm_edit_button.resize(48, 48)
         self.confirm_edit_button.move(self.edit_button.pos())
         self.confirm_edit_button.hide()

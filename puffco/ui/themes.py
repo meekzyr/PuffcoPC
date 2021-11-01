@@ -1,4 +1,5 @@
 from puffco.btnet import PeakProModels
+
 DEVICE_THEME_MAP = {}
 THEMES = {}
 

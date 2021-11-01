@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QFrame, QLabel, QSlider
-from PyQt5.QtGui import QFont, QColor, QIcon, QPixmap, QCursor
 from PyQt5.QtCore import Qt, QEvent
+from PyQt5.QtGui import QFont, QColor, QIcon, QPixmap, QCursor
+from PyQt5.QtWidgets import QFrame, QLabel, QSlider
 
 from . import ensure_future
 from .elements import ImageButton

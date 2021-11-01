@@ -1,8 +1,9 @@
-from bleak import BleakClient
-from . import Characteristics, Constants, PeakProModels, parse
-
-from datetime import datetime
 import struct
+from datetime import datetime
+
+from bleak import BleakClient
+
+from . import Characteristics, Constants, PeakProModels, parse
 
 PROFILE_TO_BYT_ARRAY = {0: bytearray([0, 0, 0, 0]),
                         1: bytearray([0, 0, 128, 63]),

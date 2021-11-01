@@ -1,18 +1,17 @@
 import builtins
-
 from asyncio import futures, ensure_future, sleep
+
 from PyQt5.QtCore import QSize, QMetaObject, QTimer
 from PyQt5.QtGui import QIcon, QPixmap, QColor
 from PyQt5.QtWidgets import QPushButton, QMainWindow, QLabel
-
 from bleak import BleakError, BleakScanner
 
 from puffco.btnet import Characteristics, OperatingState
-from .themes import DEVICE_THEME_MAP
+from .control_center import ControlCenter
 from .elements import ImageButton
 from .homescreen import HomeScreen
 from .profiles import HeatProfiles, Profile
-from .control_center import ControlCenter
+from .themes import DEVICE_THEME_MAP
 
 UPDATE_COUNT = 0
 CURRENT_TAB = 'home'
@@ -44,13 +43,13 @@ class PuffcoMain(QMainWindow):
         self.temp_timer.setInterval(1000)  # 1s
         self.temp_timer.timeout.connect(lambda: ensure_future(self.update_temp()).done())
 
-        self.puffcoIcon = ImageButton(':/misc/logo.png', self, size=(64, 64),
-                                      callback=lambda: self.dob.setVisible(not self.dob.isVisible()))
-        self.puffcoIcon.move(210, 0)
+        self.puffco_icon = ImageButton(':/misc/logo.png', self, size=(64, 64),
+                                       callback=lambda: self.dob.setVisible(not self.dob.isVisible()))
+        self.puffco_icon.move(210, 0)
 
         self.control_center = ControlCenter(self)
         self.ctrl_center_btn = ImageButton(':/icons/control_center.png', self,
-                                           callback=lambda: self.control_center.setHidden(not self.control_center.isHidden()),
+                                           lambda: self.control_center.setHidden(not self.control_center.isHidden()),
                                            size=(36, 36), color=QColor(*theme.TEXT_COLOR))
         self.ctrl_center_btn.move(self.width() - 70, 10)
         self.ctrl_center_btn.setDisabled(True)
@@ -64,22 +63,22 @@ class PuffcoMain(QMainWindow):
         self.dob.move(self.home.ui_battery.x(), self.home.ui_battery.y() + 30)
         self.dob.setHidden(True)
 
-        self.homeButton = QPushButton('MY PEAK', self)
-        self.homeButton.setGeometry(0, self.height() - 70, self.width() / 2, 70)
-        self.homeButton.clicked.connect(lambda: self.show_tab(self.home))
+        self.home_button = QPushButton('MY PEAK', self)
+        self.home_button.setGeometry(0, self.height() - 70, self.width() / 2, 70)
+        self.home_button.clicked.connect(lambda: self.show_tab(self.home))
 
         self.profiles = HeatProfiles(self)
         self.profiles.lower()
-        self.profilesButton = QPushButton('HEAT PROFILES', self)
-        self.profilesButton.setGeometry(self.homeButton.width() + 2, self.homeButton.y(),
-                                        self.homeButton.width() - 2, self.homeButton.height())
-        self.profilesButton.clicked.connect(lambda: self.show_tab(self.profiles))
-        self.profilesButton.setDisabled(True)
+        self.profiles_button = QPushButton('HEAT PROFILES', self)
+        self.profiles_button.setGeometry(self.home_button.width() + 2, self.home_button.y(),
+                                         self.home_button.width() - 2, self.home_button.height())
+        self.profiles_button.clicked.connect(lambda: self.show_tab(self.profiles))
+        self.profiles_button.setDisabled(True)
 
         divider = QLabel('', self)
         divider.setPixmap(QPixmap(':/assets/menu_separator.png'))
         divider.setScaledContents(True)
-        divider.setGeometry(-92, self.homeButton.y() - 4, 573, 4)
+        divider.setGeometry(-92, self.home_button.y() - 4, 573, 4)
         divider.setStyleSheet('background: transparent;')
 
         # draw up the home screen upon launching the app
@@ -134,7 +133,9 @@ class PuffcoMain(QMainWindow):
             if LAST_OPERATING_STATE != operating_state:
                 # Handle operating state changes:
                 if LAST_OPERATING_STATE:
-                    print(f'OpState changed {OperatingState(LAST_OPERATING_STATE).name} --> {OperatingState(operating_state).name}')
+                    last_state_name = OperatingState(LAST_OPERATING_STATE).name
+                    curr_state_name = OperatingState(operating_state).name
+                    print(f'OpState changed {last_state_name} --> {curr_state_name}')
                     if LAST_OPERATING_STATE in (OperatingState.PREHEATING, OperatingState.HEATED):
                         # we just came out of a heat cycle
                         await self.update_battery()
@@ -148,10 +149,10 @@ class PuffcoMain(QMainWindow):
                         # lets update the dab count
                         if not settings.value('Home/HideDabCounts', False, bool):
                             total = await self._client.get_total_dab_count()
-                            if self.home.ui_totalDabCnt.data != total:  # check if our dab count has changed
-                                self.home.ui_totalDabCnt.update_data(total)
+                            if self.home.ui_total_dab_cnt.data != total:  # check if our dab count has changed
+                                self.home.ui_total_dab_cnt.update_data(total)
                                 # we can update the daily avg as well
-                                self.home.ui_dailyDabCnt.update_data(await self._client.get_daily_dab_count())
+                                self.home.ui_daily_dab_cnt.update_data(await self._client.get_daily_dab_count())
 
                         if operating_state not in (OperatingState.PREHEATING, OperatingState.HEATED):
                             active_prof_window = self.profiles.active_profile
@@ -168,8 +169,8 @@ class PuffcoMain(QMainWindow):
                     await self._client.change_profile(current_profile_id)
                     if LAST_PROFILE_ID:
                         profile_name = await self._client.get_profile_name()
-                        if profile_name and self.home.ui_activeProfile.data != profile_name:
-                            self.home.ui_activeProfile.update_data(profile_name)
+                        if profile_name and self.home.ui_active_profile.data != profile_name:
+                            self.home.ui_active_profile.update_data(profile_name)
                             self.home.device.colorize(*await self._client.profile_color_as_rgb())
 
                     LAST_PROFILE_ID = current_profile_id
@@ -225,8 +226,8 @@ class PuffcoMain(QMainWindow):
 
                 active_prof_window.update_temp_reading(temp)
 
-            if temp and self.home.ui_bowlTemp.data != temp:
-                self.home.ui_bowlTemp.update_data(temp)
+            if temp and self.home.ui_bowl_temp.data != temp:
+                self.home.ui_bowl_temp.update_data(temp)
 
         except BleakError:
             pass
@@ -260,8 +261,8 @@ class PuffcoMain(QMainWindow):
         CURRENT_TAB = 'home' if is_home else 'profiles'
         other = self.profiles if is_home else self.home
 
-        self.homeButton.setDown(is_home)
-        self.profilesButton.setDown(not is_home)
+        self.home_button.setDown(is_home)
+        self.profiles_button.setDown(not is_home)
 
         # update the data
         try:
@@ -312,9 +313,9 @@ class PuffcoMain(QMainWindow):
         except BleakError as e:  # could not find device
             print(f'(BLEAK) "{e}", retrying..')
 
-        if self.home.ui_connectStatus.text() != 'DISCONNECTED' and not connected:
-            self.home.ui_connectStatus.setText('DISCONNECTED')
-            self.home.ui_connectStatus.setStyleSheet(f'color: red;')
+        if self.home.ui_connect_status.text() != 'DISCONNECTED' and not connected:
+            self.home.ui_connect_status.setText('DISCONNECTED')
+            self.home.ui_connect_status.setStyleSheet(f'color: red;')
 
         if connected:
             await self._client.pair()
@@ -374,7 +375,8 @@ class PuffcoMain(QMainWindow):
 
                 self.home.device.led.setMaximumWidth(self.home.device.device.width() - theme.LIGHTING_WIDTH_ADJ)
                 self.home.device.led.setPixmap(QPixmap(theme.LIGHTING))
-                self.home.device.led.resize(self.home.device.device.width() - theme.LIGHTING_WIDTH_ADJ, self.home.device.device.height())
+                self.home.device.led.resize(self.home.device.device.width() - theme.LIGHTING_WIDTH_ADJ,
+                                            self.home.device.device.height())
                 if self.home.device.color:
                     self.home.device.colorize(*self.home.device.color)
 
@@ -428,7 +430,7 @@ class PuffcoMain(QMainWindow):
         if not self.isVisible():
             self.show()
 
-        self.profilesButton.setDisabled(False)
+        self.profiles_button.setDisabled(False)
 
     def closeEvent(self, event):
         loop.stop()

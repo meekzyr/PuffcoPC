@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QAbstractButton, QLabel, QGraphicsBlurEffect, QFrame, QPushButton
-from PyQt5.QtGui import QPainter, QColor, QPixmap, QFont, QIcon
 from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtGui import QPainter, QColor, QPixmap, QFont, QIcon
+from PyQt5.QtWidgets import QAbstractButton, QLabel, QGraphicsBlurEffect, QFrame, QPushButton
 
 
 class DeviceVisualizer(QFrame):
@@ -60,7 +60,7 @@ class ImageButton(QPushButton):
             painter.end()
         return pixmap
 
-    def __init__(self, asset_path, parent, *, callback=None, size=None, color=None, paint=True):
+    def __init__(self, asset_path, parent, callback=None, *, size=None, color=None, paint=True):
         super(ImageButton, self).__init__('', parent)
         self.path = asset_path
         pixmap = self.alter_pixmap(asset_path, size, paint, color)

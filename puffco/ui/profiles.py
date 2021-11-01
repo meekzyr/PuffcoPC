@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QFrame, QLabel
 from PyQt5.QtGui import QPixmap, QFont
+from PyQt5.QtWidgets import QFrame, QLabel
 
 from . import ensure_future
 from .elements import ProfileButton
@@ -11,7 +11,7 @@ class Profile:
         self.idx = idx
         self.name = name
         self.temperature = temperature
-        self.temperature_f = round(9.0/5.0 * temperature + 32)
+        self.temperature_f = round(9.0 / 5.0 * temperature + 32)
         self.duration = time
         self.color = color
         self.color_bytes = color_bytes
