@@ -4,10 +4,12 @@
 # Qt Designer files
 *.ui
 
+*.zip
+*.tar.gz
 directions.txt
 *.bat
+
 settings.ini
-release.zip
 *.DS_Store
 assets/todo/*
 

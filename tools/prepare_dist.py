@@ -17,6 +17,7 @@ used_libraries = (
 )
 
 used_python_libraries = (
+    # windows
     '_asyncio.pyd',
     '_socket.pyd',
     '_overlapped.pyd',
@@ -25,15 +26,36 @@ used_python_libraries = (
 )
 included_directories = ('pyqt5', 'bleak_winrt', 'pil')
 
+linux_libraries = (
+    '_asyncio.so',
+    '_contextvars.so',
+    'libdus.so',
+    'libicudata.so',
+    'libicui18n.so',
+    'libicuuc.so',
+    'libqt5core.so',
+    'libqt5dbus.so',
+    'libqt5gui.so',
+    'libqt5widgets.so',
+    'libqt5xcbqpa.so',
+)
+
+print(os.getcwd())
+total = included_directories + used_libraries + used_python_libraries + linux_libraries
+
 count = 0
 for file in build_dir:
-    file = file.lower()
-    if file.endswith('.exe') or file.startswith('python') or (file in included_directories) or \
-            (file in used_libraries) or (file in used_python_libraries):
+    _file = file.lower()
+    if _file.startswith('puffco') or _file.startswith('python') or _file in total:
+        continue
+
+    file = f'puffco.dist/{file}'
+    if os.path.isdir(file) and _file in included_directories:
+        continue
+    elif '.' in _file and _file[:_file.rindex('.')] in total:
         continue
 
     count += 1
-    file = f'puffco.dist/{file}'
     if os.path.isdir(file):
         shutil.rmtree(file, ignore_errors=True)
     else:
