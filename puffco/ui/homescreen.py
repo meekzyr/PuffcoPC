@@ -68,7 +68,7 @@ class HomeScreen(QFrame):
         self.setUpdatesEnabled(False)
         if from_callback:
             self.ui_connect_status.setText('CONNECTED')
-            self.ui_connect_status.setStyleSheet('color: green;')
+            self.ui_connect_status.setStyleSheet('color: #4CD964;')
             self.ui_connect_status.adjustSize()
 
         try:

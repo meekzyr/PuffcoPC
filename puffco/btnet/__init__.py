@@ -2,6 +2,14 @@ import struct
 from enum import IntEnum
 
 
+class LanternAnimation:
+    # first byte *may* be brightness level (0-255)
+    DISCO_MODE = b'\xff \x08\x01\x00\x00\x00\x00'
+    ROTATING = b'\xff\xff\x00\x00\x15\x00\x00\x00'
+    PULSING = b'\xff\xff\x00\x00\x05\x00\x00\x00'
+    all = [PULSING, ROTATING, DISCO_MODE]  # same order as LanternSettings.animation_toggles
+
+
 class Constants:
     DABBING_ADDED_TEMP_FAHRENHEIT = 10
     DABBING_ADDED_TEMP_CELSIUS = 5

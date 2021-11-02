@@ -39,8 +39,22 @@ class DeviceVisualizer(QFrame):
 
 
 class ImageButton(QPushButton):
-    @staticmethod
-    def alter_pixmap(asset_path, size, paint, color):
+    PIXMAP = None
+
+    def __init__(self, asset_path, parent, callback=None, *, size=None, color=None, paint=True):
+        super(ImageButton, self).__init__('', parent)
+        self.path = asset_path
+        pixmap = self.alter_pixmap(asset_path, size, paint, color)
+        self._p = pixmap
+        self.setIconSize(pixmap.size())
+        self.setIcon(QIcon(pixmap))
+        self.setStyleSheet('background: transparent;')
+        self.adjustSize()
+
+        if callback:
+            self.clicked.connect(callback)
+
+    def alter_pixmap(self, asset_path, size, paint, color):
         pixmap = QPixmap(asset_path)
         if size:
             if isinstance(size, QSize):
@@ -58,19 +72,9 @@ class ImageButton(QPushButton):
             painter.setCompositionMode(painter.CompositionMode_SourceIn)
             painter.fillRect(pixmap.rect(), color or QColor(255, 255, 255))
             painter.end()
+
+        self.PIXMAP = pixmap
         return pixmap
-
-    def __init__(self, asset_path, parent, callback=None, *, size=None, color=None, paint=True):
-        super(ImageButton, self).__init__('', parent)
-        self.path = asset_path
-        pixmap = self.alter_pixmap(asset_path, size, paint, color)
-        self.setIconSize(pixmap.size())
-        self.setIcon(QIcon(pixmap))
-        self.setStyleSheet('background: transparent;')
-        self.adjustSize()
-
-        if callback:
-            self.clicked.connect(callback)
 
     def resize(self, w: int, h: int) -> None:
         self.setIconSize(QSize(w, h))
@@ -111,7 +115,7 @@ class ProfileButton(QAbstractButton):
         self.temperature.move(10, 50)
 
         self.glow = QLabel('', self)
-        self.glow.setPixmap(QPixmap(':/assets/profile-glow.png'))
+        self.glow.setPixmap(QPixmap(':/themes/profile_bg_glow.png'))
         self.glow.move(150, -30)
         b = QGraphicsBlurEffect()
         b.setBlurRadius(5)

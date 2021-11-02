@@ -5,10 +5,10 @@ THEMES = {}
 
 
 class Theme:
-    BACKGROUND = ':/assets/basic_background.png'
-    DEVICE = ':/assets/basic_peak.png'
-    LIGHTING = ':/assets/basic_lighting.png'
-    HOME_DATA = ':/assets/basic_home_data.png'
+    BACKGROUND = ':/themes/basic_background.png'
+    DEVICE = ':/themes/basic_peak.png'
+    LIGHTING = ':/themes/basic_lighting.png'
+    HOME_DATA = ':/themes/basic_home_data.png'
     LIGHTING_WIDTH_ADJ = 50  # this is subtracted
     TEXT_COLOR = (255, 255, 255)
 

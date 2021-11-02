@@ -6,7 +6,7 @@ from PyQt5.QtGui import QIcon, QPixmap, QColor
 from PyQt5.QtWidgets import QPushButton, QMainWindow, QLabel
 from bleak import BleakError, BleakScanner
 
-from puffco.btnet import Characteristics, OperatingState
+from puffco.btnet import Characteristics, OperatingState, LanternAnimation
 from .control_center import ControlCenter
 from .elements import ImageButton
 from .homescreen import HomeScreen
@@ -31,7 +31,7 @@ class PuffcoMain(QMainWindow):
         self.setMinimumSize(self.SIZE)
         self.setMaximumSize(self.SIZE)
         self.setMouseTracking(True)
-        self.setWindowIcon(QIcon(":/misc/puffco.ico"))
+        self.setWindowIcon(QIcon(":/icons/puffco.ico"))
         self.setStyleSheet(f"background-image: url({theme.BACKGROUND});\n"
                            f"color: rgb{theme.TEXT_COLOR};\n"
                            "border: 0px;")
@@ -43,7 +43,7 @@ class PuffcoMain(QMainWindow):
         self.temp_timer.setInterval(1000)  # 1s
         self.temp_timer.timeout.connect(lambda: ensure_future(self.update_temp()).done())
 
-        self.puffco_icon = ImageButton(':/misc/logo.png', self, size=(64, 64),
+        self.puffco_icon = ImageButton(':/icons/logo.png', self, size=(64, 64),
                                        callback=lambda: self.dob.setVisible(not self.dob.isVisible()))
         self.puffco_icon.move(210, 0)
 
@@ -76,7 +76,7 @@ class PuffcoMain(QMainWindow):
         self.profiles_button.setDisabled(True)
 
         divider = QLabel('', self)
-        divider.setPixmap(QPixmap(':/assets/menu_separator.png'))
+        divider.setPixmap(QPixmap(':/themes/menu_separator.png'))
         divider.setScaledContents(True)
         divider.setGeometry(-92, self.home_button.y() - 4, 573, 4)
         divider.setStyleSheet('background: transparent;')
@@ -135,7 +135,7 @@ class PuffcoMain(QMainWindow):
                 if LAST_OPERATING_STATE:
                     last_state_name = OperatingState(LAST_OPERATING_STATE).name
                     curr_state_name = OperatingState(operating_state).name
-                    print(f'OpState changed {last_state_name} --> {curr_state_name}')
+                    print(f'(DEBUG) OpState changed {last_state_name} --> {curr_state_name}')
                     if LAST_OPERATING_STATE in (OperatingState.PREHEATING, OperatingState.HEATED):
                         # we just came out of a heat cycle
                         await self.update_battery()
@@ -278,14 +278,15 @@ class PuffcoMain(QMainWindow):
         other.setVisible(False)
 
     async def connect(self, *, retry=False):
+        if not retry:
+            print('Scanning for Peak Pro devices..')
+
         if self._client.RETRIES >= 100:
             raise ConnectionRefusedError('Could not connect to any devices.')
 
         if self._client.address == '':
             scanner = BleakScanner()
-            print('Scanning for bluetooth devices..')
             devices_found = await scanner.discover()
-            print(f'{len(devices_found)} Bluetooth devices found.. looking for Puffco devices..')
             for device in devices_found:
                 service_uuids = device.metadata.get('uuids')
                 device_mac_address = device.address
@@ -294,16 +295,18 @@ class PuffcoMain(QMainWindow):
                     continue
 
                 if Characteristics.SERVICE_UUID in service_uuids or device.address.startswith('84:2E:14:'):
-                    print(f'Potential Puffco Product "{device.name}" ({device.address})')
+                    print(f'Potential Peak Pro "{device.name}" ({device.address})')
                     self._client.name = device.name
                     self._client.address = device.address
                     break
 
             if self._client.address == '':
+                print('Could not locate a Peak Pro, rescanning..')
                 return await self.connect(retry=True)
 
         connected = False
         timeout = False
+        e = None
         try:
             connected = await self._client.connect(timeout=3, use_cached=not retry)
             await self._on_connect()
@@ -311,7 +314,7 @@ class PuffcoMain(QMainWindow):
             print('Timed out while connecting, retrying..')
             timeout = True
         except BleakError as e:  # could not find device
-            print(f'(BLEAK) "{e}", retrying..')
+            print(f'(ERROR: BLEAK) "{e}", retrying..')
 
         if self.home.ui_connect_status.text() != 'DISCONNECTED' and not connected:
             self.home.ui_connect_status.setText('DISCONNECTED')
@@ -323,7 +326,7 @@ class PuffcoMain(QMainWindow):
             if retry:
                 self._client.RETRIES += 1
 
-            if not timeout:
+            if (not timeout) and (not e):
                 print('Failed to connect, retrying..')
 
             await sleep(2.5)  # reconnectDelayMs: 2500
@@ -354,7 +357,7 @@ class PuffcoMain(QMainWindow):
         if settings.value('General/Theme', 'unset', str) == 'unset':
             model = await self._client.get_device_model()
             if model not in DEVICE_THEME_MAP:
-                print(f'unknown device model {model}')
+                print(f'Unknown device model {model}')
                 builtins.theme = theme = DEVICE_THEME_MAP['0']  # basic/default
             else:
                 builtins.theme = theme = DEVICE_THEME_MAP[model]
@@ -388,6 +391,10 @@ class PuffcoMain(QMainWindow):
         self.control_center.lantern_brightness.setValue(await self._client.get_lantern_brightness())
         self.control_center.lantern_brightness.blockSignals(False)
 
+        boost_temp, boost_time = await self._client.get_boost_settings()
+        self.control_center.boost_settings.temp_slider.setValue(boost_temp)
+        self.control_center.boost_settings.time_slider.setValue(boost_time)
+
         # Activate control center buttons:
         for control in self.control_center.CONTROLS:
             value = settings.value(control.setting_name, False, bool)
@@ -396,6 +403,19 @@ class PuffcoMain(QMainWindow):
                 # send the lantern status and continue. we do not want to activate the button,
                 # as that will cause the lantern UI to appear upon opening control center
                 await self._client.send_lantern_status(value)
+
+                lantern_color = await self._client.get_lantern_color()
+                if lantern_color in LanternAnimation.all:  # lantern is an animation preset, toggle the button!
+                    idx = LanternAnimation.all.index(lantern_color)
+                    self.control_center.lantern_settings.animation_toggle(['PULSING', 'ROTATING', 'DISCO_MODE'][idx])
+                else:
+                    rgb = tuple(lantern_color[:3])
+                    self.control_center.lantern_settings.wheel.selected = rgb
+                    self.control_center.lantern_settings.preview.setStyleSheet(f'background: rgb{rgb};'
+                                                                               f'border: 1px solid white;')
+
+                control.ENABLED = not value
+                control.on_click(update_setting=False)
                 continue
 
             if value:

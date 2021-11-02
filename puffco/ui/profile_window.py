@@ -8,14 +8,14 @@ from .elements import ImageButton
 
 
 class ColorSlider(QLabel):
-    ASSET = 'rainbow_slider.png'
+    ASSET = 'color_slider.png'
     selecting = False
     selected = None
 
     def __init__(self, parent):
         super(ColorSlider, self).__init__('', parent)
         self.setMouseTracking(True)
-        pixmap = QPixmap(f':assets/{self.ASSET}')
+        pixmap = QPixmap(f':/themes/{self.ASSET}')
         self.image = Image.fromqpixmap(pixmap)
         self.setPixmap(pixmap)
         self.setFixedSize(self.pixmap().size())
@@ -213,7 +213,7 @@ class ProfileWindow(QMainWindow):
         self.confirm_edit_button.move(self.edit_button.pos())
         self.confirm_edit_button.hide()
 
-        self.start_button = ImageButton(':/misc/logo.png', self, callback=self.start)
+        self.start_button = ImageButton(':/icons/logo.png', self, callback=self.start)
         self.start_button.resize(64, 64)
         self.start_button.move(207, 180)
         self.cancel_button = ImageButton(':/icons/cancel.png', self, callback=lambda: self.done(cancel=True))
@@ -341,7 +341,7 @@ class ProfileWindow(QMainWindow):
             self.duration.setText(self._dur)
         else:
             ensure_future(self.controls.write_to_device(self._name, self.r_temp, self.r_dur, self._color)).done()
-            print('successfully wrote changes to profile')
+            print('Successfully wrote changes to profile.')
 
         if cancel:
             ensure_future(client.preheat(cancel=True)).done()
