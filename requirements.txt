@@ -1,0 +1,6 @@
+PyQt5==5.15.5
+bleak==0.13.0
+imageio
+zstandard
+nuitka
+pillow

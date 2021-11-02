@@ -1,0 +1,60 @@
+<RCC>
+  <qresource prefix="themes">
+    <file alias="color_slider.png">themes/color_slider.png</file>
+    <file alias="color_wheel.png">themes/color_wheel.png</file>
+    <file alias="color_wheel_cursor.png">themes/color_wheel_cursor.png</file>
+    <file alias="menu_separator.png">themes/menu_separator.png</file>
+    <file alias="profile_bg_glow.png">themes/profile_bg_glow.png</file>
+
+    <file alias="basic_background.png">themes/basic_background.png</file>
+    <file alias="basic_home_data.png">themes/basic_home_data.png</file>
+    <file alias="basic_lighting.png">themes/basic_lighting.png</file>
+    <file alias="basic_peak.png">themes/basic_peak.png</file>
+    <file alias="opal_background.png">themes/opal_background.png</file>
+    <file alias="opal_home_data.png">themes/opal_home_data.png</file>
+    <file alias="opal_lighting.png">themes/opal_lighting.png</file>
+    <file alias="opal_peak.png">themes/opal_peak.png</file>
+  </qresource>
+
+  <qresource prefix="icons">
+    <file alias="boost_mode.png">icons/boost_mode.png</file>
+    <file alias="boost_temp.png">icons/boost_temp.png</file>
+    <file alias="boost_time.png">icons/boost_time.png</file>
+    <file alias="cancel.png">icons/cancel.png</file>
+    <file alias="clock.png">icons/clock.png</file>
+    <file alias="confirm.png">icons/confirm.png</file>
+    <file alias="control_center.png">icons/control_center.png</file>
+    <file alias="control_center_btn.png">icons/control_center_btn.png</file>
+    <file alias="lantern_breathing.png">icons/lantern_breathing.png</file>
+    <file alias="lantern_disco.png">icons/lantern_disco.png</file>
+    <file alias="lantern_mode.png">icons/lantern_mode.png</file>
+    <file alias="lantern_rotating.png">icons/lantern_rotating.png</file>
+    <file alias="logo.png">icons/logo.png</file>
+    <file alias="more.png">icons/more.png</file>
+    <file alias="power_mode.png">icons/power_mode.png</file>
+    <file alias="puffco.ico">icons/puffco.ico</file>
+    <file alias="ready_mode.png">icons/ready_mode.png</file>
+    <file alias="settings.png">icons/settings.png</file>
+    <file alias="stealth_mode.png">icons/stealth_mode.png</file>
+    <file alias="thermometer.png">icons/thermometer.png</file>
+  </qresource>
+
+  <qresource prefix="battery">
+    <file alias="10.png">battery/10.png</file>
+    <file alias="25.png">battery/25.png</file>
+    <file alias="50.png">battery/50.png</file>
+    <file alias="75.png">battery/75.png</file>
+    <file alias="charging_10.png">battery/charging_10.png</file>
+    <file alias="charging_25.png">battery/charging_25.png</file>
+    <file alias="charging_50.png">battery/charging_50.png</file>
+    <file alias="charging_75.png">battery/charging_75.png</file>
+    <file alias="charging_full.png">battery/charging_full.png</file>
+    <file alias="full.png">battery/full.png</file>
+    <file alias="unknown.png">battery/unknown.png</file>
+  </qresource>
+
+  <qresource prefix="fonts">
+    <file alias="bigshoulders_medium.ttf">fonts/BigShouldersDisplay_Medium.ttf</file>
+    <file alias="puffco_slick.ttf">fonts/puffco_slick.ttf</file>
+  </qresource>
+</RCC>
