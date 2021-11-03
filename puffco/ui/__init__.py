@@ -306,7 +306,6 @@ class PuffcoMain(QMainWindow):
 
         connected = False
         timeout = False
-        e = None
         try:
             connected = await self._client.connect(timeout=3, use_cached=not retry)
             await self._on_connect()
@@ -326,7 +325,7 @@ class PuffcoMain(QMainWindow):
             if retry:
                 self._client.RETRIES += 1
 
-            if (not timeout) and (not e):
+            if not timeout:
                 print('Failed to connect, retrying..')
 
             await sleep(2.5)  # reconnectDelayMs: 2500
