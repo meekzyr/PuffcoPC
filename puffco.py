@@ -49,10 +49,10 @@ async def process():
     # replacement for app._exec, allowing us to use
     # asyncio's event loops to update the UI
     while True:
-        app.processEvents()
         try:
+            app.processEvents()
             await sleep(0)
-        except CancelledError:
+        except (CancelledError, KeyboardInterrupt):
             break
 
 
@@ -104,7 +104,7 @@ if __name__ == "__main__":
         pass
     finally:
         # stop all of our tasks:
-        for task in all_tasks():
+        for task in all_tasks(main_loop):
             task.cancel()
 
         # flush and close our custom log handler
