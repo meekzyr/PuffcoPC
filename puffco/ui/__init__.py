@@ -1,5 +1,5 @@
 import builtins
-from asyncio import futures, ensure_future, sleep
+from asyncio import exceptions, ensure_future, sleep
 
 from PyQt5.QtCore import QSize, QMetaObject, QTimer
 from PyQt5.QtGui import QIcon, QPixmap, QColor
@@ -309,7 +309,7 @@ class PuffcoMain(QMainWindow):
         try:
             connected = await self._client.connect(timeout=3, use_cached=not retry)
             await self._on_connect()
-        except futures.TimeoutError:  # could not connect to device
+        except exceptions.TimeoutError:  # could not connect to device
             print('Timed out while connecting, retrying..')
             timeout = True
         except BleakError as e:  # could not find device
