@@ -48,10 +48,10 @@ class OperatingState(IntEnum):
     MASTER_OFF = 3
     SLEEP = 4
     IDLE = 5
-    ON_TEMP_SELECT = 6  # pressing device button for profile switch
-    PREHEATING = 7
-    HEATED = 8
-    COOLDOWN = 9
+    TEMP_SELECT = 6  # pressing device button for profile switch
+    HEAT_CYCLE_PREHEAT = 7
+    HEAT_CYCLE_ACTIVE = 8
+    HEAT_CYCLE_FADE = 9
     VERSION_DISPLAY = 10
     BATTERY_DISPLAY = 11
     FACTORY_TEST = 12  # unknown

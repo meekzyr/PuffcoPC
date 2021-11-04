@@ -8,10 +8,12 @@
 
     <file alias="basic_background.png">themes/basic_background.png</file>
     <file alias="basic_home_data.png">themes/basic_home_data.png</file>
+    <file alias="basic_home_data_rainbow.png">themes/basic_home_data_rainbow.png</file>
     <file alias="basic_lighting.png">themes/basic_lighting.png</file>
     <file alias="basic_peak.png">themes/basic_peak.png</file>
     <file alias="opal_background.png">themes/opal_background.png</file>
     <file alias="opal_home_data.png">themes/opal_home_data.png</file>
+    <file alias="opal_home_data_rainbow.png">themes/opal_home_data_rainbow.png</file>
     <file alias="opal_lighting.png">themes/opal_lighting.png</file>
     <file alias="opal_peak.png">themes/opal_peak.png</file>
   </qresource>
@@ -33,6 +35,7 @@
     <file alias="more.png">icons/more.png</file>
     <file alias="power_mode.png">icons/power_mode.png</file>
     <file alias="puffco.ico">icons/puffco.ico</file>
+    <file alias="rainbow.png">icons/rainbow.png</file>
     <file alias="ready_mode.png">icons/ready_mode.png</file>
     <file alias="settings.png">icons/settings.png</file>
     <file alias="stealth_mode.png">icons/stealth_mode.png</file>

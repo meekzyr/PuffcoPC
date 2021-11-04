@@ -4,7 +4,7 @@ from typing import Union
 
 from bleak import BleakClient
 
-from . import Characteristics, Constants, LanternAnimation, PeakProModels, parse
+from . import *
 
 PROFILE_TO_BYT_ARRAY = {0: bytearray([0, 0, 0, 0]),
                         1: bytearray([0, 0, 128, 63]),
@@ -36,6 +36,9 @@ class PuffcoBleakClient(BleakClient):
 
         return data
 
+    async def send_command(self, command: int):
+        await self.write_gatt_char(Characteristics.COMMAND, struct.pack('f', command))
+
     async def get_device_model(self, *, return_name=False) -> str:
         model_number = (await self.read_gatt_char(Characteristics.MODEL_NUMBER)).decode()
         if return_name:
@@ -51,15 +54,8 @@ class PuffcoBleakClient(BleakClient):
         state = int(float(parse(await self.read_gatt_char(Characteristics.BATTERY_CHARGE_STATE))))
         return state in (0, 1), state == 0
 
-    async def power_off(self) -> None:
-        await self.write_gatt_char(Characteristics.COMMAND, bytearray([0, 0, 0, 0]))
-
     async def preheat(self, cancel=False) -> None:
-        if cancel:
-            byte_arr = bytearray([0, 0, 0, 65])  # heatCycleAbort
-        else:
-            byte_arr = bytearray([0, 0, 224, 64])  # heatCycleStart
-        await self.write_gatt_char(Characteristics.COMMAND, byte_arr)
+        await self.send_command(DeviceCommands.HEAT_CYCLE_ABORT if cancel else DeviceCommands.HEAT_CYCLE_START)
 
     async def get_battery_charge_eta(self):
         """

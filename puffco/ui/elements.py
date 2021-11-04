@@ -82,12 +82,15 @@ class ImageButton(QPushButton):
 
 
 class ProfileButton(QAbstractButton):
-    def __init__(self, parent, i, pixmap, geom, *, callback):
+    def __init__(self, parent, i, geom, *, callback):
         super(ProfileButton, self).__init__(parent)
+        self.home = parent.parent()
+        self._idx = i
         self.setObjectName(f'ProfileButton-{i}')
         self.setGeometry(*geom)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
-        self._pixmap = pixmap
+        self.pix_asset = theme.HOME_DATA
+        self._pixmap = QPixmap(self.pix_asset)
 
         # add a 2px grayish border around us
         self._border = QFrame(parent)
@@ -152,10 +155,16 @@ class ProfileButton(QAbstractButton):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setOpacity(0.9)
-        painter.setCompositionMode(painter.CompositionMode_Overlay)
+        mode = painter.CompositionMode_Overlay
+        if self.home.PROFILES[self._idx].rainbow:
+            if settings.value('General/Theme', 'unset', str) != 'opal':
+                mode = painter.CompositionMode_Lighten
+            else:
+                mode = painter.CompositionMode_SourceIn
+
         if self.color:
             painter.fillRect(event.rect(), QColor(*self.color))
-
+        painter.setCompositionMode(mode)
         painter.drawPixmap(event.rect(), self._pixmap)
         painter.end()
 

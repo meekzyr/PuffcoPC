@@ -1,10 +1,14 @@
-from PIL import Image
+from PIL import Image, ImageColor
 from PyQt5.QtCore import QSize, Qt, QTimer
 from PyQt5.QtGui import QFont, QMouseEvent, QPixmap
-from PyQt5.QtWidgets import QMainWindow, QLabel, QFrame, QSlider, QLineEdit
+from PyQt5.QtWidgets import QMainWindow, QLabel, QFrame, QSlider, QLineEdit, QCheckBox
 
+from puffco.btnet import Constants, LanternAnimation
 from . import ensure_future
 from .elements import ImageButton
+
+RAINBOW_PREVIEW_CSS = "border: 1px solid white;" \
+                      'background-image: url(:/icons/rainbow.png)'
 
 
 class ColorSlider(QLabel):
@@ -136,6 +140,26 @@ class EditControls(QFrame):
 
         self.color_control = ProfileSlider(self, 'COLOR', ':/icons/clock.png', color=True, current=color)
         self.color_control.move(0, 140)
+        self.rainbow_button = QCheckBox('RAINBOW MODE', self.color_control)
+        self.rainbow_button.setFont(self.color_control.title.font())
+        self.rainbow_button.toggled.connect(self.toggle_rainbow_profile)
+        self.rainbow_button.move(80, 0)
+        self.start_rainbow_state = False
+
+    def show(self) -> None:
+        self.start_rainbow_state = self.rainbow_button.isChecked()
+        return super(EditControls, self).show()
+
+    def toggle_rainbow_profile(self, on):
+        if on:
+            self.color_control.slider.selected = LanternAnimation.DISCO_MODE
+            self.color_control.preview.setStyleSheet(RAINBOW_PREVIEW_CSS)
+        else:
+            default_color = list(Constants.FACTORY_HEX_COLORS.values())[self._idx]
+            rgb_val = ImageColor.getcolor(default_color, 'RGB')
+            self.color_control.slider.selected = self.parent()._color = rgb_val
+            self.color_control.preview.setStyleSheet(f'background: rgb{rgb_val};'
+                                                     f'border: 1px solid white;')
 
     async def write_to_device(self, old_name, old_temp, old_dur, old_color):
         home = self.parent().parent()
@@ -159,13 +183,24 @@ class EditControls(QFrame):
             await client.set_profile_time(new_dur)
 
         new_color = self.color_control.value
-        if new_color is not None and new_color != old_color:
-            # i have NO idea what all the individual bytes attribute to
-            profile.color_bytes = list(new_color) + profile.color_bytes[3:]
-            profile.color = new_color
+        update = new_color != old_color
+        if not update and (self.start_rainbow_state and not self.rainbow_button.isChecked()):
+            update = True
+
+        if new_color is not None and update:
+            if new_color == LanternAnimation.DISCO_MODE:
+                profile.color_bytes = LanternAnimation.DISCO_MODE
+            else:
+                # i have NO idea what all the individual bytes attribute to
+                profile.color_bytes = list(new_color) + profile.color_bytes[3:]
+                if profile.color_bytes[3] and not profile.color_bytes[5]:
+                    profile.color_bytes[3] = 0  # disable disco
+                    profile.color_bytes[5] = 1  # enable LED
+
+                profile.color = new_color
             await client.set_profile_color(profile.color_bytes)
 
-        await home.profiles.fill()
+        await home.profiles.fill(self._idx)
 
 
 class ProfileWindow(QMainWindow):
@@ -175,7 +210,7 @@ class ProfileWindow(QMainWindow):
     started = False
     verified = False
 
-    def __init__(self, parent, idx=0, _name='ALN TEST', _temp=475, raw_dur=15, _color=None):
+    def __init__(self, parent, idx=0, _name='ALN TEST', _temp=475, raw_dur=15, _color=None, rainbow=False):
         super(ProfileWindow, self).__init__(parent)
         self.idx = idx
         self._name = _name
@@ -197,6 +232,7 @@ class ProfileWindow(QMainWindow):
         self.p_name.move(196, 36)
         self.p_name.setReadOnly(True)
         self.p_name.textEdited.connect(self.uppercase_text)
+        self.p_name.setStyleSheet('background: transparent;')
         self.p_name.selectionChanged.connect(lambda: self.p_name.setSelection(0, 0))
 
         self.edit_button = ImageButton(':/icons/more.png', self, callback=self.edit_clicked)
@@ -255,6 +291,9 @@ class ProfileWindow(QMainWindow):
         self.controls = EditControls(self, idx, _temp, raw_dur, _color)
         self.controls.move(self.controls.x() + 32, self.controls.y() - 60)
         self.controls.hide()
+
+        if rainbow:
+            self.controls.rainbow_button.setChecked(True)
 
         self.temp_boost = ImageButton(':/icons/boost_temp.png', self, paint=False, size=(54, 54),
                                       callback=self.send_boost)

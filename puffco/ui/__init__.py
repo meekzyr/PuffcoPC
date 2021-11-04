@@ -112,7 +112,7 @@ class PuffcoMain(QMainWindow):
                     led.show()
 
             operating_state = await self._client.get_operating_state()
-            if operating_state not in (OperatingState.PREHEATING, OperatingState.HEATED):
+            if operating_state not in (OperatingState.HEAT_CYCLE_PREHEAT, OperatingState.HEAT_CYCLE_ACTIVE):
                 global LAST_CHARGING_STATE
                 is_charging, bulk_charge = await self._client.is_currently_charging()
                 if settings.value('Modes/Ready', False, bool) and (LAST_CHARGING_STATE[0] is True
@@ -136,7 +136,7 @@ class PuffcoMain(QMainWindow):
                     last_state_name = OperatingState(LAST_OPERATING_STATE).name
                     curr_state_name = OperatingState(operating_state).name
                     print(f'(DEBUG) OpState changed {last_state_name} --> {curr_state_name}')
-                    if LAST_OPERATING_STATE in (OperatingState.PREHEATING, OperatingState.HEATED):
+                    if LAST_OPERATING_STATE in (OperatingState.HEAT_CYCLE_PREHEAT, OperatingState.HEAT_CYCLE_ACTIVE):
                         # we just came out of a heat cycle
                         await self.update_battery()
 
@@ -154,7 +154,7 @@ class PuffcoMain(QMainWindow):
                                 # we can update the daily avg as well
                                 self.home.ui_daily_dab_cnt.update_data(await self._client.get_daily_dab_count())
 
-                        if operating_state not in (OperatingState.PREHEATING, OperatingState.HEATED):
+                        if operating_state not in (OperatingState.HEAT_CYCLE_PREHEAT, OperatingState.HEAT_CYCLE_ACTIVE):
                             active_prof_window = self.profiles.active_profile
                             if active_prof_window and active_prof_window.started:
                                 active_prof_window.cycle_finished()
@@ -162,7 +162,7 @@ class PuffcoMain(QMainWindow):
                 LAST_OPERATING_STATE = operating_state
 
             # Current operating state handling:
-            if operating_state == OperatingState.ON_TEMP_SELECT:
+            if operating_state == OperatingState.TEMP_SELECT:
                 global LAST_PROFILE_ID
                 current_profile_id = await self._client.get_profile()
                 if LAST_PROFILE_ID != current_profile_id:
@@ -175,12 +175,12 @@ class PuffcoMain(QMainWindow):
 
                     LAST_PROFILE_ID = current_profile_id
 
-            elif operating_state in (OperatingState.PREHEATING, OperatingState.HEATED):
+            elif operating_state in (OperatingState.HEAT_CYCLE_PREHEAT, OperatingState.HEAT_CYCLE_ACTIVE):
                 self.temp_timer.setInterval(1000)
                 if not self.temp_timer.isActive():
                     self.temp_timer.start()
 
-            elif operating_state == OperatingState.COOLDOWN:
+            elif operating_state == OperatingState.HEAT_CYCLE_FADE:
                 # we are fresh out of a heat cycle, lets update the battery display and slow our temperature updates
                 self.temp_timer.setInterval(1000 * 3)
                 await self.update_battery()
@@ -219,7 +219,7 @@ class PuffcoMain(QMainWindow):
 
                     active_prof_window.verified = True
 
-                if LAST_OPERATING_STATE in (OperatingState.PREHEATING, OperatingState.HEATED) and \
+                if LAST_OPERATING_STATE in (OperatingState.HEAT_CYCLE_PREHEAT, OperatingState.HEAT_CYCLE_ACTIVE) and \
                         not active_prof_window.started:
                     # adjust the UI if we have not already done so
                     active_prof_window.start(send_command=False)

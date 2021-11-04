@@ -1,7 +1,7 @@
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtWidgets import QFrame, QLabel
 
-from . import ensure_future
+from . import ensure_future, LanternAnimation
 from .elements import ProfileButton
 from .profile_window import ProfileWindow
 
@@ -15,6 +15,10 @@ class Profile:
         self.duration = time
         self.color = color
         self.color_bytes = color_bytes
+
+    @property
+    def rainbow(self):
+        return (bytes(self.color_bytes) == LanternAnimation.DISCO_MODE) or self.color_bytes[3] == 1
 
     def __str__(self):
         return str(self.__dict__)
@@ -45,8 +49,7 @@ class HeatProfiles(QFrame):
 
         geom = [30, 70, self.parent().width() - 65, 110]  # x, y, w, h
         for i in range(0, 4):
-            self.profile_buttons[i] = ProfileButton(self, i, QPixmap(theme.HOME_DATA),
-                                                    geom, callback=self.select_profile)
+            self.profile_buttons[i] = ProfileButton(self, i, geom, callback=self.select_profile)
             geom[1] += geom[3] + 20  # offset 20px
 
     def select_profile(self, profile_num):
@@ -57,18 +60,32 @@ class HeatProfiles(QFrame):
         profile = self.parent().PROFILES[profile_num]
         ensure_future(client.change_profile(profile_num, current=True)).done()
         self.active_profile = ProfileWindow(self.parent(), profile_num, profile.name, profile.temperature_f,
-                                            profile.duration, tuple(profile.color))
+                                            profile.duration, tuple(profile.color), profile.rainbow)
         self.active_profile.show()
 
-    async def fill(self):
+    async def fill(self, idx=None):
         self.setUpdatesEnabled(False)
 
         for profile in self.parent().PROFILES:
+            if idx is not None and profile.idx != idx:
+                continue
+
             label = self.profile_buttons[profile.idx]
             label.set_profile_name(profile.name)
             label.set_temperature(f'{profile.temperature_f} °F')
             label.set_duration(f'{profile.duration // 60}:{str(profile.duration % 60).zfill(2)}')
-            label.set_pixmap_color(profile.color)
+            if profile.rainbow:
+                label.pix_asset = theme.RAINBOW_PROFILE
+                label.color = None
+                label._pixmap = QPixmap(label.pix_asset)
+                label.set_pixmap_color((0, 0, 0))
+            else:
+                if label.pix_asset != theme.HOME_DATA:
+                    label.pix_asset = theme.HOME_DATA
+                    label._pixmap = QPixmap(label.pix_asset)
+                    label.update()
+
+                label.set_pixmap_color(profile.color)
             label.raise_()
 
         self.setUpdatesEnabled(True)

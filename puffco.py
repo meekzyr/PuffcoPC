@@ -103,12 +103,14 @@ if __name__ == "__main__":
     except (KeyboardInterrupt, CancelledError):
         pass
     finally:
-        # stop all of our tasks:
-        for task in all_tasks(main_loop):
-            task.cancel()
-
         # flush and close our custom log handler
         logger.close_log()
-        # stop our main loop, and close the app
-        main_loop.stop()
+        if main_loop:
+            # stop all of our tasks:
+            for task in all_tasks(main_loop):
+                task.cancel()
+
+            # stop our main loop, and close the app
+            main_loop.stop()
+
         app.quit()

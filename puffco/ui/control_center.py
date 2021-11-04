@@ -3,7 +3,7 @@ from PyQt5.QtGui import QFont, QColor, QIcon, QPixmap, QCursor
 from PyQt5.QtWidgets import QFrame, QLabel, QSlider, QPushButton
 from PIL import Image, ImageOps
 
-from puffco.btnet import Constants
+from puffco.btnet import Constants, DeviceCommands
 from . import ensure_future, LanternAnimation
 from .elements import ImageButton
 from .profile_window import ColorSlider
@@ -378,4 +378,4 @@ class ControlCenter(QFrame):
 
     @staticmethod
     def power_down():
-        ensure_future(client.power_off()).done()
+        ensure_future(client.send_command(DeviceCommands.MASTER_OFF)).done()
