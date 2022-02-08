@@ -1,7 +1,8 @@
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtWidgets import QFrame, QLabel
 
-from . import ensure_future, LanternAnimation
+from puffco.bluetooth import ensure_future
+from . import LanternAnimation
 from .elements import ProfileButton
 from .profile_window import ProfileWindow
 
@@ -58,10 +59,39 @@ class HeatProfiles(QFrame):
             self.active_profile = None
 
         profile = self.parent().PROFILES[profile_num]
-        ensure_future(client.change_profile(profile_num, current=True)).done()
+        ensure_future(client.device().change_profile(profile_num, current=True))
         self.active_profile = ProfileWindow(self.parent(), profile_num, profile.name, profile.temperature_f,
                                             profile.duration, tuple(profile.color), profile.rainbow)
         self.active_profile.show()
+
+    async def retrieve_profiles(self):
+        root = self.parent()
+        device = root.bluetooth.device()
+        current_profile_name = await device.profile_name
+
+        reset_idx = None
+        # loop through the 4 profiles; fetching and storing the data for each of them
+        for i in range(0, 4):
+            await device.change_profile(i)
+
+            name = await device.profile_name
+            if current_profile_name == name:
+                reset_idx = i
+
+            color_bytes = await device.profile_color
+            _temp = await device.profile_temp
+            _time = await device.profile_time
+            root.PROFILES.append(Profile(i, name, _temp, _time, color_bytes[:3], color_bytes))
+
+        # reset the profile back to where it was
+        if reset_idx is not None:
+            await device.change_profile(reset_idx, current=True)
+
+        if root.profiles.isVisible():
+            root.profiles.setVisible(False)
+
+        await self.fill()
+        root.profiles_button.setDisabled(False)
 
     async def fill(self, idx=None):
         self.setUpdatesEnabled(False)

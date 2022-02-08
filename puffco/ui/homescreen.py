@@ -1,7 +1,6 @@
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFrame, QLabel
 
-from . import BleakError
 from .elements import Battery, DataLabel, DeviceVisualizer
 
 
@@ -71,24 +70,19 @@ class HomeScreen(QFrame):
             self.ui_connect_status.setStyleSheet('color: #4CD964;')
             self.ui_connect_status.adjustSize()
 
-        try:
-            profile_name = await client.get_profile_name()
-            if from_callback or (profile_name != self.ui_active_profile.data):
-                self.device.colorize(*await client.profile_color_as_rgb())
-                self.ui_active_profile.update_data(profile_name)
+        profile_name = await client.device().profile_name
+        if from_callback or (profile_name != self.ui_active_profile.data):
+            self.device.colorize(*await client.device().profile_color_as_rgb())
+            self.ui_active_profile.update_data(profile_name)
 
-            await self.parent().update_battery()
-            self.ui_bowl_temp.update_data(await client.get_bowl_temperature())
-            if from_callback:
-                self.ui_device_name.setText(await client.get_device_name())
-                self.ui_device_name.adjustSize()
-                if not settings.value('Home/HideDabCounts', False, bool):
-                    self.ui_daily_dab_cnt.update_data(await client.get_daily_dab_count())
-                    self.ui_total_dab_cnt.update_data(await client.get_total_dab_count())
-
-        except BleakError:
-            # no connection..
-            pass
+        await self.parent().update_battery()
+        self.ui_bowl_temp.update_data(await client.device().bowl_temperature())
+        if from_callback:
+            self.ui_device_name.setText(client.device().device_name)
+            self.ui_device_name.adjustSize()
+            if not settings.value('Home/HideDabCounts', False, bool):
+                self.ui_daily_dab_cnt.update_data(await client.device().daily_dab_count)
+                self.ui_total_dab_cnt.update_data(await client.device().total_dab_count)
 
         if not self.isVisible():
             self.setVisible(True)

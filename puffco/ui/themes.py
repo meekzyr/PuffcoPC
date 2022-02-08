@@ -1,4 +1,4 @@
-from puffco.btnet import PeakProModels
+from puffco.bluetooth.constants import PeakProModels
 
 DEVICE_THEME_MAP = {}
 THEMES = {}

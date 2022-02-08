@@ -3,12 +3,10 @@ from PyQt5.QtCore import QSize, Qt, QTimer
 from PyQt5.QtGui import QFont, QMouseEvent, QPixmap
 from PyQt5.QtWidgets import QMainWindow, QLabel, QFrame, QSlider, QLineEdit, QCheckBox
 
-from puffco.btnet import Constants, LanternAnimation
-from . import ensure_future
+from puffco.bluetooth import ensure_future
+from puffco.bluetooth.constants import *
 from .elements import ImageButton
-
-RAINBOW_PREVIEW_CSS = "border: 1px solid white;" \
-                      'background-image: url(:/icons/rainbow.png)'
+from .constants import RAINBOW_PREVIEW_CSS
 
 
 class ColorSlider(QLabel):
@@ -161,26 +159,28 @@ class EditControls(QFrame):
             self.color_control.preview.setStyleSheet(f'background: rgb{rgb_val};'
                                                      f'border: 1px solid white;')
 
-    async def write_to_device(self, old_name, old_temp, old_dur, old_color):
+    def write_to_device(self, old_name, old_temp, old_dur, old_color):
         home = self.parent().parent()
         profile = home.PROFILES[self._idx]
         new_name = self.parent().p_name.text()
+
+        device = client.device()
         if new_name and old_name != new_name:
             profile.name = new_name
             self.setWindowTitle(new_name)
-            await client.set_profile_name(new_name)
+            device.set_profile_name(new_name)
 
         new_temp = self.temperature_control.value
         if new_temp and old_temp != new_temp:
             profile.temperature_f = new_temp
             # new temp is in fahrenheit, convert to celsius
             profile.temperature = round((new_temp - 32) * 0.5556, 2)
-            await client.set_profile_temp(profile.temperature)
+            device.set_profile_temp(profile.temperature)
 
         new_dur = self.duration_control.value
         if old_dur and new_dur != old_dur:
             profile.duration = new_dur
-            await client.set_profile_time(new_dur)
+            device.set_profile_time(new_dur)
 
         new_color = self.color_control.value
         update = new_color != old_color
@@ -198,9 +198,10 @@ class EditControls(QFrame):
                     profile.color_bytes[5] = 1  # enable LED
 
                 profile.color = new_color
-            await client.set_profile_color(profile.color_bytes)
 
-        await home.profiles.fill(self._idx)
+            device.set_profile_color(profile.color_bytes)
+
+        ensure_future(home.profiles.fill(self._idx))
 
 
 class ProfileWindow(QMainWindow):
@@ -307,10 +308,10 @@ class ProfileWindow(QMainWindow):
 
         self.stopwatch = QTimer(self)
         self.stopwatch.setInterval(1000)
-        self.stopwatch.timeout.connect(lambda: ensure_future(self.update_stopwatch()).done())
+        self.stopwatch.timeout.connect(self.update_stopwatch)
 
-    async def update_stopwatch(self):
-        time_left = max(self.r_dur, await client.get_state_ttime()) - await client.get_state_etime()
+    def update_stopwatch(self):
+        time_left = max(self.r_dur, client.device().total_state_time) - client.device().elapsed_state_time
         if time_left == float('inf'):
             self.duration.setText(self._dur)
             self.stopwatch.stop()
@@ -328,7 +329,7 @@ class ProfileWindow(QMainWindow):
             profile = self.parent().PROFILES[self.idx]
             val = profile.temperature
 
-        ensure_future(client.boost(val, is_time=boost_time)).done()
+        ensure_future(client.device().boost(val, is_time=boost_time))
 
     def uppercase_text(self, text):
         self.p_name.setText(str(text[:self.PROFILE_NAME_MAX_LENGTH]).upper())
@@ -354,7 +355,7 @@ class ProfileWindow(QMainWindow):
         self.duration.move(self.temperature.x() + 15, self.temperature.y() + 60)
         self.started = True
         if send_command:
-            ensure_future(client.preheat()).done()
+            client.device().preheat()
 
     def cycle_finished(self):
         if self.stopwatch.isActive():
@@ -379,11 +380,11 @@ class ProfileWindow(QMainWindow):
             self.temperature.setText(self._temp)
             self.duration.setText(self._dur)
         else:
-            ensure_future(self.controls.write_to_device(self._name, self.r_temp, self.r_dur, self._color)).done()
+            self.controls.write_to_device(self._name, self.r_temp, self.r_dur, self._color)
             print('Successfully wrote changes to profile.')
 
         if cancel:
-            ensure_future(client.preheat(cancel=True)).done()
+            client.device().preheat(cancel=True)
 
         self.started = False
         self.p_name.selectionChanged.connect(lambda: self.p_name.setSelection(0, 0))

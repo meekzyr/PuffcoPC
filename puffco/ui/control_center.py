@@ -3,41 +3,14 @@ from PyQt5.QtGui import QFont, QColor, QIcon, QPixmap, QCursor
 from PyQt5.QtWidgets import QFrame, QLabel, QSlider, QPushButton
 from PIL import Image, ImageOps
 
-from puffco.btnet import Constants, DeviceCommands
-from . import ensure_future, LanternAnimation
+from puffco.bluetooth.constants import *
 from .elements import ImageButton
 from .profile_window import ColorSlider
+from .constants import WIDE_SLIDER_STYLE
 
 button_font = QFont()
 button_font.setPointSize(12)
 button_font.setStretch(QFont.Unstretched * 1.5)
-
-WIDE_SLIDER_STYLE = """
-.QSlider {
-    min-width: 100px;
-    max-width: 100px;
-    background: transparent;
-}
-
-.QSlider::groove:vertical {
-    border: 1px solid #262626;
-    width: 150px;
-    background: #393939;
-}
-
-.QSlider::handle:vertical {
-    background: #ffffff;
-    height: 10px;
-    margin-left: -20px;
-    margin-right: -20px;
-    border-radius: 30px;
-}
-
-.QSlider::add-page:vertical {
-    background: #ffffff;
-    border-color: #bbb;
-}
-"""
 
 
 class BoostSettings(QFrame):
@@ -117,7 +90,7 @@ class BoostSettings(QFrame):
         self.time_slider.setValue(Constants.DEFAULT_BOOST_DURATION)
 
     def update_slider(self, slider: str, val: int):
-        ensure_future(client.send_boost_settings(slider, val)).done()
+        client.device().send_boost_settings(slider, val)
         if slider == 'time':
             self.value_label_t.setText(f'+{val}s')
         else:
@@ -125,7 +98,7 @@ class BoostSettings(QFrame):
 
     def exit(self, _):
         control_center = self.parent()
-        control_center.toggle_boost_settings(True)#(False, True)
+        control_center.toggle_boost_settings(True)
 
 
 class ColorWheel(ColorSlider):
@@ -206,7 +179,7 @@ class LanternSettings(QFrame):
 
     def exit(self, _):
         control_center = self.parent()
-        lantern_set = bool(self.wheel.selected) or client.LANTERN_COLOR in LanternAnimation.all
+        lantern_set = bool(self.wheel.selected) or client.device().LANTERN_COLOR in LanternAnimation.all
         control_center.edit_lantern_settings(lantern_set, done=True)
         control_center.lantern_mode.ENABLED = lantern_set
         control_center.lantern_mode.recolor(forced=False)
@@ -238,7 +211,7 @@ class LanternSettings(QFrame):
         pixmap = control.PIXMAP = pil_img.convert('RGBA').toqpixmap()
         control.setIcon(QIcon(pixmap))
         # send the animation info
-        ensure_future(client.send_lantern_animation(anim, state)).done()
+        client.device().send_lantern_animation(anim, state)
 
 
 class ControlButton(ImageButton):
@@ -265,7 +238,7 @@ class ControlButton(ImageButton):
 
         forced = False
         if self._callback and update_setting:
-            if self.special and (not self.ENABLED) and client.LANTERN_COLOR in LanternAnimation.all:
+            if self.special and (not self.ENABLED) and client.device().LANTERN_COLOR in LanternAnimation.all:
                 forced = self.ENABLED = True
 
             self._callback(forced if forced else self.ENABLED)
@@ -307,7 +280,7 @@ class ControlCenter(QFrame):
         self.boost_controls.move((parent.width() / 2), 150)
 
         self.power_button = ImageButton(':/icons/power_mode.png', self, paint=False,
-                                        size=(54, 54), callback=self.power_down)
+                                        size=(54, 54), callback=lambda: client.device().send_command(DeviceCommands.MASTER_OFF))
         self.power_button.move((parent.width() / 2) + 70, 150)
 
         self.lantern_mode = ControlButton(self, 'LANTERN\nMODE', ':/icons/lantern_mode.png', (26, 42),
@@ -320,7 +293,7 @@ class ControlCenter(QFrame):
         self.ready_mode.move(self.boost_controls.x() - 57, self.lantern_mode.y() + 100)
 
         self.stealth_mode = ControlButton(self, 'STEALTH\nMODE', ':/icons/stealth_mode.png', (42, 30),
-                                          'Modes/Stealth', paint=False, callback=self.toggle_stealth)
+                                          'Modes/Stealth', paint=False, callback=self.set_stealth_mode)
         self.stealth_mode.move(self.boost_controls.x() - 57, self.ready_mode.y() + 100)
         self.stealth_mode.btn_icon.move(55, 50)
 
@@ -333,19 +306,19 @@ class ControlCenter(QFrame):
         self.lantern_brightness.setSingleStep(1)
         self.lantern_brightness.setFixedHeight((parent.height() / 2) - 15)
         self.lantern_brightness.move(75, (parent.height() / 4) - 25)
-        self.lantern_brightness.valueChanged.connect(self.update_lantern_brightness)
+        self.lantern_brightness.valueChanged.connect(client.send_lantern_brightness)
 
         self.CONTROLS = [self.lantern_mode, self.ready_mode, self.stealth_mode]
 
     def _lantern_callback(self, enabled):
         if enabled is False and (bool(self.lantern_settings.wheel.selected) or
-                                 client.LANTERN_COLOR in LanternAnimation.all):
+                                 client.device().LANTERN_COLOR in LanternAnimation.all):
             enabled = True
 
         self.edit_lantern_settings(enabled)
 
     def edit_lantern_settings(self, enabled, done=False):
-        ensure_future(client.send_lantern_status(enabled)).done()
+        client.device().send_lantern_status(enabled)
         if enabled and not done:
             self.parent().ctrl_center_btn.hide()
             self.lantern_settings.show()
@@ -358,7 +331,7 @@ class ControlCenter(QFrame):
     def toggle_boost_settings(self, done=False):
         enabled = not self.boost_settings.isVisible()
         print(f'toggle_boost_settings {enabled} {done}')
-        #ensure_future(client.send_lantern_status(enabled)).done()
+        client.device().send_lantern_status(enabled)
         if enabled and not done:
             self.parent().ctrl_center_btn.hide()
             self.boost_settings.show()
@@ -369,13 +342,5 @@ class ControlCenter(QFrame):
             self.boost_settings.hide()
 
     @staticmethod
-    def toggle_stealth(enabled):
-        ensure_future(client.set_stealth_mode(enabled)).done()
-
-    @staticmethod
-    def update_lantern_brightness(val):
-        ensure_future(client.send_lantern_brightness(val)).done()
-
-    @staticmethod
-    def power_down():
-        ensure_future(client.send_command(DeviceCommands.MASTER_OFF)).done()
+    def set_stealth_mode(val):
+        client.device().stealth_mode = val

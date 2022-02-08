@@ -8,12 +8,11 @@ if not os.path.exists('puffco.dist/'):
 build_dir = os.listdir('puffco.dist/')
 
 used_libraries = (
-    'bleakuwpbridge.dll',
     'qt5core.dll',
     'qt5gui.dll',
     'qt5widgets.dll',
-    'msvcp140.dll',
-    'vcruntime140.dll',
+    'qt5dbus.dll',
+    'qt5bluetooth.dll',
 )
 
 used_python_libraries = (
@@ -24,7 +23,7 @@ used_python_libraries = (
     'clr.pyd',
     'select.pyd',
 )
-included_directories = ('pyqt5', 'bleak_winrt', 'pil')
+included_directories = ('pyqt5', 'pil')
 
 linux_libraries = (
     '_asyncio.so',
@@ -35,12 +34,12 @@ linux_libraries = (
     'libicuuc.so',
     'libqt5core.so',
     'libqt5dbus.so',
+    'libqt5bluetooth.so',
     'libqt5gui.so',
     'libqt5widgets.so',
     'libqt5xcbqpa.so',
 )
 
-print(os.getcwd())
 total = included_directories + used_libraries + used_python_libraries + linux_libraries
 
 count = 0
@@ -59,10 +58,10 @@ for file in build_dir:
     if os.path.isdir(file):
         shutil.rmtree(file, ignore_errors=True)
     else:
+        print(f'removing file {file}')
         os.unlink(file)
 
 
 print(f'Removed {count} unused files. Compressing dist directory..')
 fmt = {'win32': 'zip', 'linux': 'gztar', 'darwin': 'zip'}[sys.platform]
 shutil.make_archive('release', format=fmt, root_dir='puffco.dist/', base_dir=None)
-print('Done.')
