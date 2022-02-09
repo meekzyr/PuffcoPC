@@ -1,5 +1,5 @@
 PyQt5==5.15.5
 imageio
 zstandard
-nuitka
+nuitka==0.6.17.5
 pillow
