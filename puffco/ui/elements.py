@@ -1,6 +1,6 @@
-from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QPainter, QColor, QPixmap, QFont, QIcon
-from PyQt5.QtWidgets import QAbstractButton, QLabel, QGraphicsBlurEffect, QFrame, QPushButton
+from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtGui import QPainter, QColor, QPixmap, QFont, QIcon
+from PyQt6.QtWidgets import QAbstractButton, QLabel, QGraphicsBlurEffect, QFrame, QPushButton
 
 
 class DeviceVisualizer(QFrame):
@@ -18,7 +18,7 @@ class DeviceVisualizer(QFrame):
 
         self.led.setPixmap(QPixmap(theme.LIGHTING))
         self.led.setScaledContents(True)
-        self.led.setAlignment(Qt.AlignCenter)
+        self.led.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.led.setStyleSheet(None)
         self.color = None
 
@@ -26,7 +26,7 @@ class DeviceVisualizer(QFrame):
         self.color = (r, g, b)
         pixmap = QPixmap(theme.LIGHTING)
         painter = QPainter(pixmap)
-        painter.setCompositionMode(painter.CompositionMode_SourceIn)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
         painter.fillRect(pixmap.rect(), QColor(r, g, b, alpha))
         painter.end()
         self.led.setPixmap(pixmap)
@@ -69,7 +69,7 @@ class ImageButton(QPushButton):
 
         if paint:
             painter = QPainter(pixmap)
-            painter.setCompositionMode(painter.CompositionMode_SourceIn)
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
             painter.fillRect(pixmap.rect(), color or QColor(255, 255, 255))
             painter.end()
 
@@ -88,7 +88,7 @@ class ProfileButton(QAbstractButton):
         self._idx = i
         self.setObjectName(f'ProfileButton-{i}')
         self.setGeometry(*geom)
-        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.pix_asset = theme.HOME_DATA
         self._pixmap = QPixmap(self.pix_asset)
 
@@ -105,13 +105,13 @@ class ProfileButton(QAbstractButton):
         self.duration.adjustSize()
 
         f = QFont(self.font().family(), 16)
-        f.setStretch(QFont.Unstretched * 1.5)
+        f.setStretch(QFont.Stretch.Unstretched * 1.5)
 
         self.profile_name = QLabel('', self)
         self.profile_name.setFont(f)
         self.profile_name.move(10, 5)
         self.temperature = QLabel('', self)
-        f.setStretch(QFont.Unstretched)
+        f.setStretch(QFont.Stretch.Unstretched)
         f.setPointSize(32)
         f.setBold(True)
         self.temperature.setFont(f)
@@ -136,8 +136,9 @@ class ProfileButton(QAbstractButton):
         pm = self.glow.pixmap()
         painter = QPainter(pm)
         painter.setOpacity(0.9)
-        painter.setCompositionMode(painter.CompositionMode_SourceIn)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
         painter.fillRect(pm.rect(), QColor(*color))
+        painter.end()
         self.update()
 
     def set_profile_name(self, name):
@@ -155,12 +156,12 @@ class ProfileButton(QAbstractButton):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setOpacity(0.9)
-        mode = painter.CompositionMode_Overlay
+        mode = QPainter.CompositionMode.CompositionMode_Overlay
         if self.home.PROFILES[self._idx].rainbow:
             if settings.value('General/Theme', 'unset', str) != 'opal':
-                mode = painter.CompositionMode_Lighten
+                mode = QPainter.CompositionMode.CompositionMode_Lighten
             else:
-                mode = painter.CompositionMode_SourceIn
+                mode = QPainter.CompositionMode.CompositionMode_SourceIn
 
         if self.color:
             painter.fillRect(event.rect(), QColor(*self.color))
@@ -186,16 +187,16 @@ class DataLabel(QLabel):
         self.setScaledContents(True)
         self.setMaximumSize(340, 80)
         self.setMinimumSize(280, 80)
-        self.setAlignment(Qt.AlignCenter)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.heading = QLabel(heading, self)
         self.heading.move(10, 5)
         self.heading.adjustSize()
-        self.heading.setAlignment(Qt.AlignCenter)
+        self.heading.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._data = QLabel(data, self)
         self._data.move(15, 45)
         self._data.adjustSize()
-        self._data.setAlignment(Qt.AlignCenter)
+        self._data.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def update_data(self, data: str):
         self._data.setText(data)

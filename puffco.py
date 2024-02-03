@@ -4,9 +4,9 @@ import sys
 from asyncio import all_tasks, CancelledError, ensure_future, get_event_loop, sleep
 from datetime import datetime
 
-from PyQt5.QtGui import QFont, QFontDatabase
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import QSettings
+from PyQt6.QtGui import QFont, QFontDatabase
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QSettings
 
 from puffco.btnet.client import PuffcoBleakClient
 from puffco.ui.themes import THEMES
@@ -78,7 +78,7 @@ def initialize_settings(_settings):
     _settings.endGroup()
 
 
-builtins.settings = settings = QSettings('settings.ini', QSettings.IniFormat)
+builtins.settings = settings = QSettings('settings.ini', QSettings.Format.IniFormat)
 if not settings.allKeys():
     initialize_settings(settings)
 

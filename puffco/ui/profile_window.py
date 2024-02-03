@@ -1,7 +1,7 @@
 from PIL import Image, ImageColor
-from PyQt5.QtCore import QSize, Qt, QTimer
-from PyQt5.QtGui import QFont, QMouseEvent, QPixmap
-from PyQt5.QtWidgets import QMainWindow, QLabel, QFrame, QSlider, QLineEdit, QCheckBox
+from PyQt6.QtCore import QSize, Qt, QTimer
+from PyQt6.QtGui import QFont, QMouseEvent, QPixmap
+from PyQt6.QtWidgets import QMainWindow, QLabel, QFrame, QSlider, QLineEdit, QCheckBox
 
 from puffco.btnet import Constants, LanternAnimation
 from . import ensure_future
@@ -28,8 +28,8 @@ class ColorSlider(QLabel):
         if not self.selecting:
             return
 
-        x = ev.x()
-        y = ev.y()
+        pos = ev.pos()
+        x, y = pos.x(), pos.y()
         if y >= self.image.height:
             y = min(2, y)
 
@@ -42,17 +42,17 @@ class ColorSlider(QLabel):
             return
 
         self.selected = pixel_color
-        self.parent().preview.setStyleSheet(f'background: rgb{self.selected};'
+        self.parent().preview.setStyleSheet(f'background: {"rgba" if len(pixel_color) == 4 else "rgb"}{self.selected};'
                                             f'border: 1px solid white;')
 
     def mouseReleaseEvent(self, ev: QMouseEvent) -> None:
-        if ev.button() != Qt.LeftButton:
+        if ev.button() != Qt.MouseButton.LeftButton:
             return
 
         self.selecting = False
 
     def mousePressEvent(self, ev: QMouseEvent) -> None:
-        if ev.button() != Qt.LeftButton:
+        if ev.button() != Qt.MouseButton.LeftButton:
             return
 
         self.selecting = True
@@ -80,7 +80,7 @@ class ProfileSlider(QFrame):
         self.title.move(0, 0)
 
         if not color:
-            self.slider = QSlider(Qt.Horizontal, self)
+            self.slider = QSlider(Qt.Orientation.Horizontal, self)
             self.slider.setRange(*_range)
             self.slider.setValue(value or _range[0])
             self.slider.setTickInterval(1)
@@ -173,7 +173,7 @@ class EditControls(QFrame):
         new_temp = self.temperature_control.value
         if new_temp and old_temp != new_temp:
             profile.temperature_f = new_temp
-            # new temp is in fahrenheit, convert to celsius
+            # new temp is in Fahrenheit, convert to celsius
             profile.temperature = round((new_temp - 32) * 0.5556, 2)
             await client.set_profile_temp(profile.temperature)
 
@@ -189,9 +189,9 @@ class EditControls(QFrame):
 
         if new_color is not None and update:
             if new_color == LanternAnimation.DISCO_MODE:
-                profile.color_bytes = LanternAnimation.DISCO_MODE
+                profile.color_bytes = list(LanternAnimation.DISCO_MODE)
             else:
-                # i have NO idea what all the individual bytes attribute to
+                # I have NO idea what all the individual bytes attribute to
                 profile.color_bytes = list(new_color) + profile.color_bytes[3:]
                 if profile.color_bytes[3] and not profile.color_bytes[5]:
                     profile.color_bytes[3] = 0  # disable disco
@@ -223,7 +223,7 @@ class ProfileWindow(QMainWindow):
         self.setWindowTitle(_name)
         self.setFixedSize(self.SIZE)
         font = QFont(self.font().family(), 20)
-        font.setStretch(QFont.Unstretched * 1.5)
+        font.setStretch(QFont.Stretch.Unstretched * 1.5)
 
         self.p_name = QLineEdit('', self)
         self.p_name.setFont(font)
@@ -277,7 +277,7 @@ class ProfileWindow(QMainWindow):
         self.temperature.setFixedSize(150, 80)
         font.setWeight(QFont.Weight.ExtraBold)
         font.setPointSize(28)
-        font.setStretch(QFont.Unstretched)
+        font.setStretch(QFont.Stretch.Unstretched)
         self.temperature.setFont(font)
         self.temperature.move(*self.TEMP_DEFAULT_XY)
         self.temperature.setStyleSheet('background: transparent;')
@@ -308,6 +308,10 @@ class ProfileWindow(QMainWindow):
         self.stopwatch = QTimer(self)
         self.stopwatch.setInterval(1000)
         self.stopwatch.timeout.connect(lambda: ensure_future(self.update_stopwatch()).done())
+
+    def closeEvent(self, a0) -> None:
+        ensure_future(client.send_lantern_status(False)).done()
+        a0.accept()
 
     async def update_stopwatch(self):
         time_left = max(self.r_dur, await client.get_state_ttime()) - await client.get_state_etime()
@@ -380,7 +384,6 @@ class ProfileWindow(QMainWindow):
             self.duration.setText(self._dur)
         else:
             ensure_future(self.controls.write_to_device(self._name, self.r_temp, self.r_dur, self._color)).done()
-            print('Successfully wrote changes to profile.')
 
         if cancel:
             ensure_future(client.preheat(cancel=True)).done()

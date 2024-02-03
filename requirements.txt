@@ -1,6 +1,9 @@
-PyQt5==5.15.5
-bleak==0.13.0
+PyQt6
+bleak
 imageio
 zstandard
 nuitka
 pillow
+psutil
+python-dateutil
+requests

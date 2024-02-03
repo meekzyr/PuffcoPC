@@ -1,9 +1,9 @@
 import builtins
 from asyncio import exceptions, ensure_future, sleep
 
-from PyQt5.QtCore import QSize, QMetaObject, QTimer
-from PyQt5.QtGui import QIcon, QPixmap, QColor
-from PyQt5.QtWidgets import QPushButton, QMainWindow, QLabel
+from PyQt6.QtCore import QSize, QMetaObject, QTimer
+from PyQt6.QtGui import QIcon, QPixmap, QColor
+from PyQt6.QtWidgets import QPushButton, QMainWindow, QLabel
 from bleak import BleakError, BleakScanner
 
 from puffco.btnet import Characteristics, OperatingState, LanternAnimation

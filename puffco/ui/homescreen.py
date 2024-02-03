@@ -1,5 +1,5 @@
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QFrame, QLabel
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QFrame, QLabel
 
 from . import BleakError
 from .elements import Battery, DataLabel, DeviceVisualizer
@@ -17,7 +17,7 @@ class HomeScreen(QFrame):
         self.ui_device_name = QLabel('- - - -', self)
         self.ui_device_name.setMinimumWidth(parent.width() // 2)
         self.ui_device_name.move(self.ui_device_name.minimumWidth() // 2, 10)
-        self.ui_device_name.setAlignment(Qt.AlignCenter)
+        self.ui_device_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.ui_device_name.setWordWrap(False)
         self.ui_device_name.setStyleSheet('font-size: 30px;\n'
                                           'font-weight: bold;')
@@ -28,13 +28,13 @@ class HomeScreen(QFrame):
         self.status_label.move((parent.width() // 3) + 10,
                                self.ui_device_name.y() + self.ui_device_name.height())
 
-        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.ui_connect_status = QLabel('DISCONNECTED', self)
         self.ui_connect_status.setMinimumHeight(self.status_label.height())
         self.ui_connect_status.adjustSize()
         self.ui_connect_status.move((parent.width() // 2) - 10, self.status_label.y())
         self.ui_connect_status.setStyleSheet("color: red;")
-        self.ui_connect_status.setAlignment(Qt.AlignCenter)
+        self.ui_connect_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.ui_battery = Battery(self)
         self.ui_battery.move(self.status_label.x() + 20, self.status_label.y() + self.status_label.height() + 5)

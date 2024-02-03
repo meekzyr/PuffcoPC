@@ -1,5 +1,5 @@
-from PyQt5.QtGui import QPixmap, QFont
-from PyQt5.QtWidgets import QFrame, QLabel
+from PyQt6.QtGui import QPixmap, QFont
+from PyQt6.QtWidgets import QFrame, QLabel
 
 from . import ensure_future, LanternAnimation
 from .elements import ProfileButton
@@ -33,7 +33,7 @@ class HeatProfiles(QFrame):
         self.setStyleSheet('background: transparent;')
         self.heading = QLabel('HEAT PROFILES', self)
         font = QFont(self.font().family(), 24)
-        font.setStretch(font.Unstretched * 1.25)
+        font.setStretch(QFont.Stretch.Unstretched * 1.25)
         self.heading.setFont(font)
         self.heading.adjustSize()
         self.heading.move(150, 5)

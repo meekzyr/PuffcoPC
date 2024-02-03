@@ -27,8 +27,10 @@ class Opal(Theme):
     RAINBOW_PROFILE = Basic.RAINBOW_PROFILE.replace('basic', 'opal')
     LIGHTING_WIDTH_ADJ = 0
     TEXT_COLOR = (0, 0, 0)
-    # TODO: Fix up this theme
-    #  * I do not have an Opal Peak, so I cannot replicate the UI
+    # TODO: Fix up this theme (I do not have an Opal Peak, so I cannot replicate the UI)
+
+
+# TODO: recreate themes for any missing limited edition devices
 
 
 THEMES['basic'] = Basic()

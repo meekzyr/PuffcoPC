@@ -1,6 +1,6 @@
-from PyQt5.QtCore import Qt, QEvent
-from PyQt5.QtGui import QFont, QColor, QIcon, QPixmap, QCursor
-from PyQt5.QtWidgets import QFrame, QLabel, QSlider, QPushButton
+from PyQt6.QtCore import Qt, QEvent
+from PyQt6.QtGui import QFont, QColor, QIcon, QPixmap, QCursor
+from PyQt6.QtWidgets import QFrame, QLabel, QSlider, QPushButton
 from PIL import Image, ImageOps
 
 from puffco.btnet import Constants, DeviceCommands
@@ -10,7 +10,7 @@ from .profile_window import ColorSlider
 
 button_font = QFont()
 button_font.setPointSize(12)
-button_font.setStretch(QFont.Unstretched * 1.5)
+button_font.setStretch(QFont.Stretch.Unstretched * 1.5)
 
 WIDE_SLIDER_STYLE = """
 .QSlider {
@@ -57,7 +57,7 @@ class BoostSettings(QFrame):
         self.help = QLabel(self.HELP, self)
         self.help.setFixedWidth(self.width() * .75)
         help_font = QFont(self.font().family(), 12)
-        help_font.setStretch(help_font.Unstretched * 1.33)
+        help_font.setStretch(QFont.Stretch.Unstretched * 1.33)
         self.help.setFont(help_font)
         self.help.setStyleSheet('background: transparent;')
         self.help.setWordWrap(True)
@@ -71,7 +71,7 @@ class BoostSettings(QFrame):
         self.cancel_button.resize(48, 48)
         self.cancel_button.move(self.width() - self.cancel_button.width() - 10, 6)
 
-        self.temp_slider = QSlider(Qt.Vertical, self)
+        self.temp_slider = QSlider(Qt.Orientation.Vertical, self)
         self.temp_slider.setStyleSheet(WIDE_SLIDER_STYLE)
         self.temp_slider.setRange(Constants.BOOST_TEMPERATURE_MIN_CELSIUS, Constants.BOOST_TEMPERATURE_MAX_CELSIUS)
         self.temp_slider.setValue(Constants.DEFAULT_BOOST_TEMP_CELSIUS)
@@ -88,7 +88,7 @@ class BoostSettings(QFrame):
         self.value_label_te.setMinimumWidth(200)
         self.value_label_te.move(self.temp_slider.x() + 20, self.temp_slider.y() - 45)
 
-        self.time_slider = QSlider(Qt.Vertical, self)
+        self.time_slider = QSlider(Qt.Orientation.Vertical, self)
         self.time_slider.setStyleSheet(WIDE_SLIDER_STYLE)
         self.time_slider.setRange(Constants.BOOST_DURATION_MIN, Constants.BOOST_DURATION_MAX)
         self.time_slider.setValue(Constants.DEFAULT_BOOST_DURATION)
@@ -143,7 +143,7 @@ class ColorWheel(ColorSlider):
         w, h = pixmap.width(), pixmap.height()
         if w >= self.width() or h >= self.height():
             pixmap = pixmap.scaled(parent.width(), parent.height() / 2,
-                                   Qt.KeepAspectRatio)
+                                   Qt.AspectRatioMode.KeepAspectRatio)
 
             w, h = pixmap.width(), pixmap.height()
             self.image = self.image.resize((w, h))
@@ -151,7 +151,7 @@ class ColorWheel(ColorSlider):
             self.setPixmap(pixmap)
 
     def mouseReleaseEvent(self, ev) -> None:
-        if ev.button() != Qt.LeftButton:
+        if ev.button() != Qt.MouseButton.LeftButton:
             return
 
         if self.selecting and ((self.selected is None) or self.selected == self.last_selected):
@@ -324,7 +324,7 @@ class ControlCenter(QFrame):
         self.stealth_mode.move(self.boost_controls.x() - 57, self.ready_mode.y() + 100)
         self.stealth_mode.btn_icon.move(55, 50)
 
-        self.lantern_brightness = QSlider(Qt.Vertical, self)
+        self.lantern_brightness = QSlider(Qt.Orientation.Vertical, self)
         self.lantern_brightness.setStyleSheet(WIDE_SLIDER_STYLE)
         self.lantern_brightness.setRange(Constants.BRIGHTNESS_MIN, Constants.BRIGHTNESS_MAX)
         self.lantern_brightness.setValue(Constants.BRIGHTNESS_MIN)
@@ -357,7 +357,7 @@ class ControlCenter(QFrame):
 
     def toggle_boost_settings(self, done=False):
         enabled = not self.boost_settings.isVisible()
-        print(f'toggle_boost_settings {enabled} {done}')
+        # print(f'toggle_boost_settings {enabled} {done}')
         #ensure_future(client.send_lantern_status(enabled)).done()
         if enabled and not done:
             self.parent().ctrl_center_btn.hide()
