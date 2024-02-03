@@ -13,6 +13,10 @@ from .homescreen import HomeScreen
 from .profiles import HeatProfiles, Profile
 from .themes import DEVICE_THEME_MAP
 
+DISABLED_BUTTON_STYLESHEET = 'QPushButton {color: gray;}'
+ENABLED_BUTTON_STYLESHEET = 'QPushButton {color: white;}'
+ACTIVE_TAB_STYLESHEET = 'QPushButton {text-decoration: underline;}'
+INACTIVE_TAB_STYLESHEET = 'QPushButton {text-decoration: none;}'
 UPDATE_COUNT = 0
 CURRENT_TAB = 'home'
 LAST_CHARGING_STATE = [None, None]
@@ -64,12 +68,14 @@ class PuffcoMain(QMainWindow):
         self.dob.setHidden(True)
 
         self.home_button = QPushButton('MY PEAK', self)
+        self.home_button.setStyleSheet('QPushButton {color: gray; text-decoration: underline;}')
         self.home_button.setGeometry(0, self.height() - 70, self.width() / 2, 70)
         self.home_button.clicked.connect(lambda: self.show_tab(self.home))
 
         self.profiles = HeatProfiles(self)
         self.profiles.lower()
         self.profiles_button = QPushButton('HEAT PROFILES', self)
+        self.profiles_button.setStyleSheet(DISABLED_BUTTON_STYLESHEET)
         self.profiles_button.setGeometry(self.home_button.width() + 2, self.home_button.y(),
                                          self.home_button.width() - 2, self.home_button.height())
         self.profiles_button.clicked.connect(lambda: self.show_tab(self.profiles))
@@ -261,6 +267,8 @@ class PuffcoMain(QMainWindow):
         CURRENT_TAB = 'home' if is_home else 'profiles'
         other = self.profiles if is_home else self.home
 
+        self.home_button.setStyleSheet(ACTIVE_TAB_STYLESHEET if is_home else INACTIVE_TAB_STYLESHEET)
+        self.profiles_button.setStyleSheet(ACTIVE_TAB_STYLESHEET if not is_home else INACTIVE_TAB_STYLESHEET)
         self.home_button.setDown(is_home)
         self.profiles_button.setDown(not is_home)
 

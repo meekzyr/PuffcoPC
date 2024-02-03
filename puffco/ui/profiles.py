@@ -59,6 +59,9 @@ class HeatProfiles(QFrame):
 
         profile = self.parent().PROFILES[profile_num]
         ensure_future(client.change_profile(profile_num, current=True)).done()
+        ensure_future(client.send_lantern_color(profile.color_bytes)).done()
+        ensure_future(client.send_lantern_status(True)).done()
+
         self.active_profile = ProfileWindow(self.parent(), profile_num, profile.name, profile.temperature_f,
                                             profile.duration, tuple(profile.color), profile.rainbow)
         self.active_profile.show()
@@ -87,5 +90,4 @@ class HeatProfiles(QFrame):
 
                 label.set_pixmap_color(profile.color)
             label.raise_()
-
         self.setUpdatesEnabled(True)

@@ -64,12 +64,16 @@ class HomeScreen(QFrame):
             self.ui_total_dab_cnt.reset_properties()
         self.setUpdatesEnabled(True)
 
+    def update_connection_status(self, text, text_color: str = None):
+        self.ui_connect_status.setText(text)
+        if text_color:
+            self.ui_connect_status.setStyleSheet(f'color: {text_color}')
+        self.ui_connect_status.adjustSize()
+
     async def fill(self, *, from_callback=False):
         self.setUpdatesEnabled(False)
         if from_callback:
-            self.ui_connect_status.setText('CONNECTED')
-            self.ui_connect_status.setStyleSheet('color: #4CD964;')
-            self.ui_connect_status.adjustSize()
+            self.update_connection_status('CONNECTED', '#4CD964')
 
         try:
             profile_name = await client.get_profile_name()
