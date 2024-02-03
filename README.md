@@ -4,7 +4,8 @@
 
 ---
 ## THIS PROJECT IS NO LONGER BEING MAINTAINED
-* You can now use the [official web app](https://puffco.app) on Google Chrome with a Bluetooth 4.0+ capable computer 
+* You can now use the [official web app](https://puffco.app) on Google Chrome with a Bluetooth 4.0+ capable computer
+* I have updated the project to support firmwares X (first firmware with auth) and AG (current as of 2/3/24) for proof of concept
 
 ---
 
