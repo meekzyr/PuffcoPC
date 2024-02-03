@@ -265,16 +265,7 @@ class PuffcoBleakClient(BleakClient):
             flag.set()
 
         async def unlock_access(access_seed):
-            new_key = bytearray(32)
-
-            for i in range(0, 16):  # add handshake key to first 16 bits; add current ACCESS_SEED_KEY to last 16 bits
-                new_key[i] = DEVICE_HANDSHAKE2_KEY[i]
-                new_key[i + 16] = access_seed[i]
-
-            digested_key = sha256(new_key).hexdigest()  # hash the new bytearray
-            # slice the digested key (we only want first 16 bits)
-            sliced_key = bytearray([int(digested_key[i:i + 2], 16) for i in range(0, len(digested_key), 2)][0:16])
-
+            sliced_key = self.create_auth_token(access_seed, DEVICE_HANDSHAKE2_KEY)
             unlock_tx = self.make_transaction(LoraxOpCodes.UNLOCK_ACCESS, None, sliced_key, callback=auth_done)
             await self.write_gatt_char(LoraxCharacteristics.LORAX_COMMAND, unlock_tx['cmd'], response=False)
 
