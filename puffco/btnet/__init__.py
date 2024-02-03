@@ -1,4 +1,5 @@
 import struct
+from base64 import b64decode
 from enum import IntEnum
 
 
@@ -79,7 +80,17 @@ PeakProModels = {
     '2': 'Indiglow Peak Pro',
     '21': 'Peak Pro',
     '22': 'Opal Peak Pro',
-    '4294967295': 'Peak Pro'
+    '25': 'Guardian Peak Pro',
+    '26': 'Guardian Peak Pro',
+    '4': 'Guardian Peak Pro',
+    '4294967295': 'Peak Pro',
+    '12': 'Peach White Peak Pro',  # same as peach desert
+    '13': 'Peach Black Peak Pro',  # same as peach desert
+    '51': 'Peak Pro',
+    '71': 'Peach Black Peak Pro',  # same as peach desert
+    '72': 'Peach White Peak Pro',  # same as peach desert
+    '15': 'Peach Desert Peak Pro',
+    '74': 'Peach Desert Peak Pro',
 }
 
 
@@ -91,8 +102,10 @@ class Characteristics:
     SERIAL_NUMBER = "00002a25-0000-1000-8000-00805f9b34fb"
     HARDWARE_REVISION = "00002a27-0000-1000-8000-00805f9b34fb"
     SOFTWARE_REVISION = "00002a28-0000-1000-8000-00805f9b34fb"
+    SOFTWARE_REV_GIT_HASH = "F9A98C15-C651-4F34-B656-D100BF580002"
+    ACCESS_SEED_KEY = 'F9A98C15-C651-4F34-B656-D100BF5800E0'
 
-    COMMAND = "F9A98C15-C651-4F34-B656-D100BF580040"
+    MODE_COMMAND = "F9A98C15-C651-4F34-B656-D100BF580040"
     HEATER_TEMP = "F9A98C15-C651-4F34-B656-D100BF580025"
     HEATER_TARGET_TEMP = "F9A98C15-C651-4F34-B656-D100BF580026"
     DEVICE_NAME = "F9A98C15-C651-4F34-B656-D100BF58004D"
@@ -123,6 +136,71 @@ class Characteristics:
     BOOST_TIME = "F9A98C15-C651-4F34-B656-D100BF580068"
     TEMPERATURE_OVERRIDE = "F9A98C15-C651-4F34-B656-D100BF580045"
     TIME_OVERRIDE = "F9A98C15-C651-4F34-B656-D100BF580046"
+
+
+class LoraxCharacteristics:
+    LORAX_SERVICE_UUID = 'e276967f-ea8a-478a-a92e-d78f5dd15dd5'
+    LORAX_VERSION = '05434bca-cc7f-4ef6-bbb3-b1c520b9800c'
+    LORAX_COMMAND = '60133d5c-5727-4f2c-9697-d842c5292a3c'
+    LORAX_REPLY = '8dc5ec05-8f7d-45ad-99db-3fbde65dbd9c'
+    LORAX_EVENT = '43312cd1-7d34-46ce-a7d3-0a98fd9b4cb8'
+    PROTOCOL_CHARS = [LORAX_VERSION, LORAX_COMMAND, LORAX_REPLY, LORAX_EVENT]
+
+    MODEL_NUMBER = "/p/sys/hw/mdcd"
+    SERIAL_NUMBER = "/p/sys/hw/ser"
+    HARDWARE_REVISION = "/p/sys/hw/ver"
+    SOFTWARE_REVISION = "/p/sys/fw/ver"
+    SOFTWARE_REV_GIT_HASH = "/p/sys/fw/gith"
+
+    MODE_COMMAND = "/p/app/mc"
+    HEATER_TEMP = "/p/app/htr/temp"
+    HEATER_TARGET_TEMP = "/p/app/htr/tcmd"
+    DEVICE_NAME = "/u/sys/name"
+    READY_MODE_CYCLE_SELECT = "/u/app/rdym/hc"
+    OPERATING_STATE = "/p/app/stat/id"
+    STATE_ELAPSED_TIME = "/p/app/stat/elap"
+    STATE_TOTAL_TIME = "/p/app/stat/tott"
+
+    LANTERN_STATUS = "/p/app/ltrn/cmd"
+    LANTERN_COLOR = "/p/app/ltrn/colr"
+    LANTERN_BRIGHTNESS = "/u/app/ui/lbrt"
+    DABS_PER_DAY = "/p/app/info/dpd"
+    TOTAL_DAB_COUNT = "/p/app/odom/0/nc"
+    STEALTH_STATUS = "/u/app/ui/stlm"
+    DEVICE_BIRTHDAY = "/u/sys/bday"
+
+    PROFILE_CURRENT = "/p/app/hcs"
+    PROFILE_NAME = "/u/app/hc/%N/name"
+    PROFILE_PREHEAT_TEMP = "/u/app/hc/%N/temp"
+    PROFILE_PREHEAT_TIME = "/u/app/hc/%N/time"
+    PROFILE_COLOR = "/u/app/hc/%N/colr"
+
+    BATTERY_SOC = "/p/bat/soc"
+    BATTERY_CHARGE_STATE = "/p/bat/chg/stat"
+    BATTERY_CHARGE_FULL_ETA = "/p/bat/chg/etf"
+
+    BOOST_TEMP = "/u/app/hc/%N/btmp"
+    BOOST_TIME = "/u/app/hc/%N/btim"
+    TEMPERATURE_OVERRIDE = "/p/app/tmpo"
+    TIME_OVERRIDE = "/p/app/timo"
+
+
+CHAR_UUID2LORAX_PATH = {getattr(Characteristics, k): v for (k, v) in LoraxCharacteristics.__dict__.items()
+                        if (k.isupper() and isinstance(v, str)) and hasattr(Characteristics, k)}
+
+
+class LoraxOpCodes:
+    GET_ACCESS_SEED = 0
+    UNLOCK_ACCESS = 1
+    GET_LIMITS = 2
+    READ_SHORT = 16
+    WRITE_SHORT = 17
+
+    WRITE = 34  # for buffers
+
+
+DEVICE_HANDSHAKE_KEY = bytearray(b64decode('FUrZc0WilhUBteT2JlCc+A=='))
+DEVICE_HANDSHAKE2_KEY = bytearray(b64decode('ZMZFYlbyb1scoSc3pd1x+w=='))
 
 
 def parse(data, fmt='f'):

@@ -8,7 +8,6 @@ from PyQt6.QtGui import QFont, QFontDatabase
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QSettings
 
-from puffco.btnet.client import PuffcoBleakClient
 from puffco.ui.themes import THEMES
 from puffco.ui import PuffcoMain
 
@@ -93,12 +92,9 @@ if __name__ == "__main__":
     QFontDatabase.addApplicationFont(':/fonts/bigshoulders_medium.ttf')
     app.setFont(QFont('Big Shoulders Display Medium', 16))
 
-    builtins.client = client = PuffcoBleakClient()
-
-    ensure_future(process())
-    ensure_future(PuffcoMain(client).connect(), loop=main_loop)
-
     try:
+        ensure_future(process())
+        ensure_future(PuffcoMain().connect(), loop=main_loop)
         main_loop.run_forever()
     except (KeyboardInterrupt, CancelledError):
         pass

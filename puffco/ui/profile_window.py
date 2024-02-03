@@ -168,19 +168,19 @@ class EditControls(QFrame):
         if new_name and old_name != new_name:
             profile.name = new_name
             self.setWindowTitle(new_name)
-            await client.set_profile_name(new_name)
+            await client.set_profile_name(new_name, self._idx)
 
         new_temp = self.temperature_control.value
         if new_temp and old_temp != new_temp:
             profile.temperature_f = new_temp
             # new temp is in Fahrenheit, convert to celsius
             profile.temperature = round((new_temp - 32) * 0.5556, 2)
-            await client.set_profile_temp(profile.temperature)
+            await client.set_profile_temp(profile.temperature, self._idx)
 
         new_dur = self.duration_control.value
         if old_dur and new_dur != old_dur:
             profile.duration = new_dur
-            await client.set_profile_time(new_dur)
+            await client.set_profile_time(new_dur, self._idx)
 
         new_color = self.color_control.value
         update = new_color != old_color
@@ -198,7 +198,7 @@ class EditControls(QFrame):
                     profile.color_bytes[5] = 1  # enable LED
 
                 profile.color = new_color
-            await client.set_profile_color(profile.color_bytes)
+            await client.set_profile_color(profile.color_bytes, self._idx)
 
         await home.profiles.fill(self._idx)
 

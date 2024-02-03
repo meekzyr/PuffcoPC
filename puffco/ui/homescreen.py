@@ -76,7 +76,7 @@ class HomeScreen(QFrame):
             self.update_connection_status('CONNECTED', '#4CD964')
 
         try:
-            profile_name = await client.get_profile_name()
+            profile_name = await client.get_profile_name(self.parent().LAST_PROFILE_ID)
             if from_callback or (profile_name != self.ui_active_profile.data):
                 self.device.colorize(*await client.profile_color_as_rgb())
                 self.ui_active_profile.update_data(profile_name)

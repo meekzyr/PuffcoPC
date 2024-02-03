@@ -378,4 +378,4 @@ class ControlCenter(QFrame):
 
     @staticmethod
     def power_down():
-        ensure_future(client.send_command(DeviceCommands.MASTER_OFF)).done()
+        ensure_future(client.send_mode_command(DeviceCommands.MASTER_OFF)).done()

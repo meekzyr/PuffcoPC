@@ -6,7 +6,8 @@ from PyQt6.QtGui import QIcon, QPixmap, QColor
 from PyQt6.QtWidgets import QPushButton, QMainWindow, QLabel
 from bleak import BleakError, BleakScanner
 
-from puffco.btnet import Characteristics, OperatingState, LanternAnimation
+from puffco.btnet.client import PuffcoBleakClient
+from puffco.btnet import Characteristics, LoraxCharacteristics, DEVICE_HANDSHAKE_KEY, OperatingState, LanternAnimation
 from .control_center import ControlCenter
 from .elements import ImageButton
 from .homescreen import HomeScreen
@@ -21,15 +22,15 @@ UPDATE_COUNT = 0
 CURRENT_TAB = 'home'
 LAST_CHARGING_STATE = [None, None]
 LAST_OPERATING_STATE = None
-LAST_PROFILE_ID = None
 
 
 class PuffcoMain(QMainWindow):
     PROFILES = []
     SIZE = QSize(480, 720)
+    LAST_PROFILE_ID = 0
 
-    def __init__(self, client):
-        self._client = client
+    def __init__(self):
+        self._client = None  # overridden
         super(PuffcoMain, self).__init__(parent=None)
         self.setWindowTitle("Puffco Connect (PC)")
         self.setMinimumSize(self.SIZE)
@@ -169,17 +170,16 @@ class PuffcoMain(QMainWindow):
 
             # Current operating state handling:
             if operating_state == OperatingState.TEMP_SELECT:
-                global LAST_PROFILE_ID
                 current_profile_id = await self._client.get_profile()
-                if LAST_PROFILE_ID != current_profile_id:
+                if self.LAST_PROFILE_ID != current_profile_id:
                     await self._client.change_profile(current_profile_id)
-                    if LAST_PROFILE_ID:
-                        profile_name = await self._client.get_profile_name()
+                    if self.LAST_PROFILE_ID:
+                        profile_name = await self._client.get_profile_name(self.LAST_PROFILE_ID)
                         if profile_name and self.home.ui_active_profile.data != profile_name:
                             self.home.ui_active_profile.update_data(profile_name)
                             self.home.device.colorize(*await self._client.profile_color_as_rgb())
 
-                    LAST_PROFILE_ID = current_profile_id
+                    self.LAST_PROFILE_ID = current_profile_id
 
             elif operating_state in (OperatingState.HEAT_CYCLE_PREHEAT, OperatingState.HEAT_CYCLE_ACTIVE):
                 self.temp_timer.setInterval(1000)
@@ -289,46 +289,92 @@ class PuffcoMain(QMainWindow):
         if not retry:
             print('Scanning for Peak Pro devices..')
 
-        if self._client.RETRIES >= 100:
+        if PuffcoBleakClient.RETRIES >= 100:
             raise ConnectionRefusedError('Could not connect to any devices.')
 
-        if self._client.address == '':
-            scanner = BleakScanner()
-            devices_found = await scanner.discover()
-            for device in devices_found:
-                service_uuids = device.metadata.get('uuids')
-                device_mac_address = device.address
-                if device_mac_address in self._client.attempted_devices:
-                    print(f'Ignoring {device.name} ({device_mac_address}), already failed to connect before')
-                    continue
+        found_device_addr, found_device_name = '', ''
+        connected, timeout = False, False
 
-                if Characteristics.SERVICE_UUID in service_uuids or device.address.startswith('84:2E:14:'):
-                    print(f'Potential Peak Pro "{device.name}" ({device.address})')
-                    self._client.name = device.name
-                    self._client.address = device.address
-                    break
+        self.home.update_connection_status('SCANNING', 'yellow')
+        discovered_devices_and_advertisement_data = await BleakScanner().discover(return_adv=True)
+        for key, dev_and_adv_dat in discovered_devices_and_advertisement_data.items():
+            device = dev_and_adv_dat[0]
+            adv_dat = dev_and_adv_dat[1]
 
-            if self._client.address == '':
-                print('Could not locate a Peak Pro, rescanning..')
-                return await self.connect(retry=True)
+            if device.address.startswith('84:2E:14:') or device.address.startswith('84:FD:27:') or \
+                    Characteristics.SERVICE_UUID in adv_dat.service_uuids:
+                self.home.update_connection_status(f'Found "{device.name}"', 'orange')
+                print(f'Potential Peak Pro "{device.name}" ({device.address})')
+                found_device_name = device.name
+                found_device_addr = device.address
+                break
 
-        connected = False
-        timeout = False
+        if not found_device_addr:
+            print('Could not locate a Peak Pro, rescanning..')
+            return await self.connect(retry=True)
+
+        self._client = PuffcoBleakClient(found_device_addr,
+                                         disconnected_callback=lambda *args: ensure_future(self.on_disconnect(*args)))
+        error = False
         try:
+            self.home.update_connection_status(f'Connecting to "{found_device_name}"', 'orange')
             connected = await self._client.connect(timeout=3, use_cached=not retry)
-            await self._on_connect()
+            if connected:
+                self._client.DEVICE_NAME = found_device_name
+                self._client.DEVICE_MAC_ADDRESS = found_device_addr
+
+                success = False
+                lorax_service = self._client.services.get_service(LoraxCharacteristics.LORAX_SERVICE_UUID)
+                if lorax_service:
+                    success = await self._client.init_lorax_proto()
+                    if not success:
+                        connected = False
+
+                else:
+                    try:
+                        device_fw_rev = (await self._client.read_gatt_char(Characteristics.SOFTWARE_REVISION)).decode()
+                    except (OSError, BleakError):
+                        device_fw_rev = None
+
+                    if device_fw_rev is None:
+                        self.home.update_connection_status(f'Connection Error', 'red')
+                        print('Error retrieving firmware revision, disconnecting.')
+                        await self._client.disconnect()
+                        self._client = None
+                        return await self.connect(retry=True)
+
+                    elif device_fw_rev == 'X':
+                        self.home.update_connection_status(f'Authenticating..', 'yellow')
+
+                        current_access_seed = list(await self._client.read_gatt_char(Characteristics.ACCESS_SEED_KEY))
+                        sliced_key = self._client.create_auth_token(current_access_seed, DEVICE_HANDSHAKE_KEY)
+
+                        # now we write this sliced key to the accessSeed characteristic, which should grant R/W perms
+                        # for the remainder of the characteristics
+                        try:
+                            await self._client.write_gatt_char(Characteristics.ACCESS_SEED_KEY, sliced_key)
+                            success = True
+                        except (BleakError, OSError):
+                            raise RuntimeError(f'Failed to authenticate to device (Firmware: {device_fw_rev})')
+
+                if success:
+                    await self._on_connect()
         except exceptions.TimeoutError:  # could not connect to device
             print('Timed out while connecting, retrying..')
-            timeout = True
+            timeout = error = True
         except BleakError as e:  # could not find device
             print(f'(ERROR: BLEAK) "{e}", retrying..')
+            error = True
 
         if self.home.ui_connect_status.text() != 'DISCONNECTED' and not connected:
-            self.home.ui_connect_status.setText('DISCONNECTED')
-            self.home.ui_connect_status.setStyleSheet(f'color: red;')
+            self.home.update_connection_status('DISCONNECTED', 'red')
 
-        if connected:
+        if connected and (error is False):
             await self._client.pair()
+            self._client.RETRIES = 0
+            print('Connected!')
+            self.home.update_connection_status('CONNECTED', '#4CD964')
+            return connected
         else:
             if retry:
                 self._client.RETRIES += 1
@@ -339,11 +385,7 @@ class PuffcoMain(QMainWindow):
             await sleep(2.5)  # reconnectDelayMs: 2500
             return await self.connect(retry=True)
 
-        self._client.RETRIES = 0
-        print('Connected!')
-        return connected
-
-    async def on_disconnect(self, client):
+    async def on_disconnect(self, client: PuffcoBleakClient):
         await self.home.reset()
         if not self.isVisible():
             self.show()
@@ -351,13 +393,14 @@ class PuffcoMain(QMainWindow):
         if self.timer.isActive():
             self.timer.stop()
 
-        print(f'Lost connection to "{client.name}" ({client.address}), attempting to reconnect...')
-        await self.connect(retry=True)
+        print(f'Lost connection to "{client.DEVICE_NAME}" ({client.DEVICE_MAC_ADDRESS}), attempting to reconnect...')
+        return await self.connect(retry=True)
 
     async def _on_connect(self):
         self.timer.start()
-        self._client.set_disconnected_callback(lambda *args: ensure_future(self.on_disconnect(*args)))
         # Set the app theme (upon first launch):
+        self.home_button.setStyleSheet(ENABLED_BUTTON_STYLESHEET)
+        self.profiles_button.setStyleSheet(ENABLED_BUTTON_STYLESHEET)
         self.ctrl_center_btn.setDisabled(False)
         self.dob.setText(f'DOB: {await self._client.get_device_birthday()}')
 
@@ -398,7 +441,7 @@ class PuffcoMain(QMainWindow):
         self.control_center.lantern_brightness.setValue(await self._client.get_lantern_brightness())
         self.control_center.lantern_brightness.blockSignals(False)
 
-        boost_temp, boost_time = await self._client.get_boost_settings()
+        boost_temp, boost_time = await self._client.get_boost_settings(self.LAST_PROFILE_ID)
         self.control_center.boost_settings.temp_slider.setValue(boost_temp)
         self.control_center.boost_settings.time_slider.setValue(boost_time)
 
@@ -428,19 +471,19 @@ class PuffcoMain(QMainWindow):
             if value:
                 control.on_click()
 
-        current_profile_name = await self._client.get_profile_name()
+        current_profile_name = await self._client.get_profile_name(self.LAST_PROFILE_ID)
 
         reset_idx = None
         # loop through the 4 profiles; fetching and storing the data for each of them
         for i in range(0, 4):
             await self._client.change_profile(i)
-            name = await self._client.get_profile_name()
+            name = await self._client.get_profile_name(i)
             if current_profile_name == name:
                 reset_idx = i
 
-            temp = await self._client.get_profile_temp()
-            color_bytes = await self._client.get_profile_color()
-            time = await self._client.get_profile_time()
+            temp = await self._client.get_profile_temp(i)
+            color_bytes = await self._client.get_profile_color(i)
+            time = await self._client.get_profile_time(i)
 
             self.PROFILES.append(Profile(i, name, temp, time, color_bytes[:3], color_bytes))
             await sleep(0.1)  # short delay to prevent incorrect profile colors
